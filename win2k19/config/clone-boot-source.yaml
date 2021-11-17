@@ -13,7 +13,7 @@ spec:
       name: windows-install-rootdisk
   pvc:
     accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
     volumeMode: Block
     resources:
       requests:

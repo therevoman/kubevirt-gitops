@@ -113,7 +113,7 @@ spec:
     spec:
       pvc:
         accessModes:
-        - ReadWriteOnce
+        - ReadWriteMany
         volumeMode: Block
         resources:
           requests:
