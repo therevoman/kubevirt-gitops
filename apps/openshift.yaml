@@ -1,20 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: windows-install
+  name: kubevirt-gitops
+  namespace: openshift-gitops
 spec:
   destination:
-    namespace: ""
+    namespace: openshift-gitops
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: win2k19
-<<<<<<< HEAD
-    repoURL: https://github.com/therevoman/kubevirt-gitops.git
-=======
+    path: apps/overlays/openshift
     repoURL: https://github.com/cwilkers/kubevirt-gitops.git
->>>>>>> 5c2b896 (retooled to make app of apps work)
     targetRevision: HEAD
   syncPolicy:
+    automated: {}
     syncOptions:
-    - CreateNamespace=false
+    - CreateNamespace=true

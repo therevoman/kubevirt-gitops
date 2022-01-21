@@ -2,7 +2,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: openshift-virtualization
-  namespace: openshift-gitops
 spec:
   destination:
     namespace: default
