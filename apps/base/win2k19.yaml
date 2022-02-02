@@ -11,12 +11,8 @@ spec:
   project: default
   source:
     path: win2k19
-<<<<<<< HEAD
     repoURL: https://github.com/therevoman/kubevirt-gitops.git
-=======
-    repoURL: https://github.com/cwilkers/kubevirt-gitops.git
->>>>>>> 5c2b896 (retooled to make app of apps work)
-    targetRevision: HEAD
+    targetRevision: ocs
   syncPolicy:
     syncOptions:
     - CreateNamespace=false
