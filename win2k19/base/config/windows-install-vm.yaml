@@ -103,7 +103,8 @@ spec:
           claimName: win2k19-install-iso
       - name: windows-guest-tools
         containerDisk:
-          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.17
+#          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.17
+          image: registry.redhat.io/container-native-virtualization/virtio-win
       - name: windows-install-scripts
         configMap:
           name: WININST_CM
