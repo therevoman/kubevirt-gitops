@@ -3,11 +3,18 @@
 echo "Starting install script"
 cd /scripts
 
-# https://hyperconverged-cluster-cli-download-openshift-cnv.apps.ocs.openshift.works/amd64/linux/virtctl.tar.gz
-wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz -O /tmp/virtctl.tar.gz
-tar -xzvf /tmp/virtctl.tar.gz -C /tmp/
+KC=oc
+${KC} get ns kubevirt-os-images >& /dev/null
+if [ $? == 0 ]
+then
+    IMAGES_NS=kubevirt-os-images
+else
+    IMAGES_NS=openshift-virtualization-os-images
+fi
 
-${KC} apply -f windows-install-vm.yaml
+MYCM=$(${KC} get configmap -o name | awk -F / '/windows-install-scripts/ { print $2 }')
+sed "s/WININST_CM/${MYCM}/" windows-install-vm.yaml | ${KC} apply -f -
+
 echo "Applied VM"
 sleep 5
 

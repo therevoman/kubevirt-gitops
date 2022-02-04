@@ -106,7 +106,7 @@ spec:
           image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.17
       - name: windows-install-scripts
         configMap:
-          name: windows-install-scripts
+          name: WININST_CM
   dataVolumeTemplates:
   - metadata:
       name: windows-install-rootdisk
