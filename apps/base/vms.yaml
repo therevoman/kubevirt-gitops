@@ -10,8 +10,8 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: vms/overlays/kubernetes
-    repoURL: https://github.com/cwilkers/kubevirt-gitops.git
+    path: vms
+    repoURL: https://github.com/therevoman/kubevirt-gitops.git
     targetRevision: HEAD
   syncPolicy:
     automated: {}
