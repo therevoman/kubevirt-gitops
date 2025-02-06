@@ -12,12 +12,10 @@ spec:
       namespace: kubevirt-gitops
       name: windows-install-rootdisk
   storage: 
-    accessModes:
-    - ReadWriteMany
-<<<<<<< HEAD
+    pvc:
+      accessModes:
+      - ReadWriteMany
+      resources:
+        requests:
+          storage: 60Gi
     volumeMode: Block
-=======
->>>>>>> 2b5e8bd (change repoURL's to point to therevoman repo)
-    resources:
-      requests:
-        storage: 60Gi

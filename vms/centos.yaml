@@ -81,10 +81,14 @@ items:
               #cloud-config
               user: centos
 <<<<<<< HEAD
+<<<<<<< HEAD
               password: vckf-pnwu-q7su  # notsecret
 =======
               password: vckf-pnwu-q7su
 >>>>>>> f573921 (using a modern template from ocp 4.17)
+=======
+              password: vckf-pnwu-q7su  # notsecret
+>>>>>>> ec220f2 (false positive on password leak)
               chpasswd: { expire: False }
           name: cloudinitdisk
 kind: List
