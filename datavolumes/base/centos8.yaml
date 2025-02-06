@@ -7,12 +7,12 @@ metadata:
   name: centos8
 spec:
   storage:
-  pvc:
-    accessModes:
-    - ReadWriteMany
-    resources:
-      requests:
-        storage: 20Gi
+    pvc:
+      accessModes:
+      - ReadWriteMany
+      resources:
+        requests:
+          storage: 20Gi
     volumeMode: Block
   source:
     http:
