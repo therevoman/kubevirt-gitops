@@ -16,5 +16,5 @@ spec:
     volumeMode: Block
   source:
     http:
-      url: http://httpd.revoweb.com/isos/windows-server-2019.iso
+      url: http://httpd.revoweb.com/isos/windows/server-2019.iso
 
