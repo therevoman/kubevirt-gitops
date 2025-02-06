@@ -18,4 +18,3 @@ spec:
     http:
       url: http://192.168.20.14/isos/windows/server-2019.iso
 #      url: http://httpd.revoweb.com/isos/windows-server-2019.iso
-
