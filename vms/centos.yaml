@@ -36,7 +36,11 @@ items:
           resources:
             requests:
               storage: 30Gi
+<<<<<<< HEAD
     running: true
+=======
+    running: false
+>>>>>>> f573921 (using a modern template from ocp 4.17)
     template:
       metadata:
         annotations:
@@ -80,7 +84,11 @@ items:
             userData: |-
               #cloud-config
               user: centos
+<<<<<<< HEAD
               password: vckf-pnwu-q7su  # notsecret
+=======
+              password: vckf-pnwu-q7su
+>>>>>>> f573921 (using a modern template from ocp 4.17)
               chpasswd: { expire: False }
           name: cloudinitdisk
 kind: List
