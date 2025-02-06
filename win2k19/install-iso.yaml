@@ -9,11 +9,11 @@ metadata:
 spec:
   pvc:
     accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
     resources:
       requests:
         storage: 6Gi
-    volumeMode: Filesystem
+    volumeMode: Block
   source:
     http:
       url: http://installhost.cnv.example.com:8080/win2k19.iso
