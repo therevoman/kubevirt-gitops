@@ -10,14 +10,9 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-<<<<<<< HEAD
     path: vms
     repoURL: https://github.com/therevoman/kubevirt-gitops.git
-=======
-    path: vms/overlays/kubernetes
-    repoURL: https://github.com/cwilkers/kubevirt-gitops.git
->>>>>>> 5c2b896 (retooled to make app of apps work)
-    targetRevision: HEAD
+    targetRevision: ocs
   syncPolicy:
     automated: {}
     syncOptions:

@@ -14,7 +14,10 @@ spec:
   storage: 
     accessModes:
     - ReadWriteMany
+<<<<<<< HEAD
     volumeMode: Block
+=======
+>>>>>>> 2b5e8bd (change repoURL's to point to therevoman repo)
     resources:
       requests:
         storage: 60Gi

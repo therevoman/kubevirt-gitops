@@ -9,10 +9,14 @@ metadata:
 spec:
   pvc:
     accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
     resources:
       requests:
+<<<<<<< HEAD
         storage: 20Gi
+=======
+        storage: 6Gi
+>>>>>>> 2b5e8bd (change repoURL's to point to therevoman repo)
     volumeMode: Block
   source:
     http:
