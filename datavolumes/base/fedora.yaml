@@ -4,15 +4,15 @@ metadata:
   annotations:
     cdi.kubevirt.io/storage.bind.immediate.requested: "true"
     kubevirt.ui/provider: fedora
+    cdi.kubevirt.io/storage.usePopulator: "true"
+    cdi.kubevirt.io/allowClaimAdoption: "true"
+    cdi.kubevirt.io/cloneType: snapshot
   name: fedora
 spec:
-  pvc:
-    accessModes:
-    - ReadWriteMany
+  storage:
     resources:
       requests:
         storage: 20Gi
-    volumeMode: Block
   source:
     http:
       url: https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-AmazonEC2-41-1.4.x86_64.raw.xz
