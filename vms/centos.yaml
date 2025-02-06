@@ -80,7 +80,7 @@ items:
             userData: |-
               #cloud-config
               user: centos
-              password: vckf-pnwu-q7su
+              password: vckf-pnwu-q7su  # notsecret
               chpasswd: { expire: False }
           name: cloudinitdisk
 kind: List
