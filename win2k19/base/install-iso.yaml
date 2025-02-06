@@ -12,13 +12,10 @@ spec:
     - ReadWriteMany
     resources:
       requests:
-<<<<<<< HEAD
         storage: 20Gi
-=======
-        storage: 6Gi
->>>>>>> 2b5e8bd (change repoURL's to point to therevoman repo)
     volumeMode: Block
   source:
     http:
       url: http://192.168.20.14/isos/windows/server-2019.iso
+#      url: http://httpd.revoweb.com/isos/windows-server-2019.iso
 
