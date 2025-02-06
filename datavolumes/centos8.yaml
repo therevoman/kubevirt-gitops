@@ -6,13 +6,10 @@ metadata:
     kubevirt.ui/provider: centos
   name: centos8
 spec:
-  pvc:
-    accessModes:
-    - ReadWriteMany
+  storage:
     resources:
       requests:
         storage: 20Gi
-    volumeMode: Block
   source:
     http:
       url: https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2
