@@ -6,7 +6,13 @@ metadata:
     kubevirt.ui/provider: centos
   name: centos8
 spec:
+<<<<<<< HEAD
   storage:
+=======
+  pvc:
+    accessModes:
+    - ReadWriteMany
+>>>>>>> 0e3130b (change Datavolumes to rwx)
     resources:
       requests:
         storage: 20Gi

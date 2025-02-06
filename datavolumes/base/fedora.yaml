@@ -10,9 +10,12 @@ metadata:
   name: fedora
 spec:
   storage:
-    resources:
-      requests:
-        storage: 20Gi
+    pvc:
+      accessModes:
+      - ReadWriteMany
+      resources:
+        requests:
+          storage: 20Gi
   source:
     http:
       url: https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-AmazonEC2-41-1.4.x86_64.raw.xz
