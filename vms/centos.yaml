@@ -36,11 +36,7 @@ items:
           resources:
             requests:
               storage: 30Gi
-<<<<<<< HEAD
     running: true
-=======
-    running: false
->>>>>>> f573921 (using a modern template from ocp 4.17)
     template:
       metadata:
         annotations:
