@@ -60,7 +60,7 @@ spec:
           claimName: win2k19-install-iso
       - name: windows-guest-tools
         containerDisk:
-          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.17.4-1
+          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.17
       - name: windows-install-scripts
         configMap:
           name: windows-install-scripts
@@ -70,7 +70,7 @@ spec:
     spec:
       pvc:
         accessModes:
-        - ReadWriteOnce
+        - ReadWriteMany
         resources:
           requests:
             storage: 12Gi

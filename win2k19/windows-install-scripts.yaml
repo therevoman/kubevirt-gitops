@@ -76,7 +76,7 @@ data:
           name: windows-install-rootdisk
       pvc:
         accessModes:
-        - ReadWriteOnce
+        - ReadWriteMany
         resources:
           requests:
             storage: 12Gi
@@ -193,7 +193,7 @@ data:
     \     - name: windows-guest-tools\n        containerDisk:\n          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.17\n
     \     - name: windows-install-scripts\n        configMap:\n          name: windows-install-scripts\n
     \ dataVolumeTemplates:\n  - metadata:\n      name: windows-install-rootdisk\n
-    \   spec:\n      pvc:\n        accessModes:\n        - ReadWriteOnce\n        resources:\n
+    \   spec:\n      pvc:\n        accessModes:\n        - ReadWriteMany\n        resources:\n
     \         requests:\n            storage: 12Gi\n      source:\n        blank:
     {}\n"
 kind: ConfigMap
