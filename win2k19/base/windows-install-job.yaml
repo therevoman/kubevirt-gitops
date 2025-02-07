@@ -14,6 +14,7 @@ spec:
       containers:
       - name: ose-cli
         image: registry.redhat.io/openshift4/ose-cli-rhel9:latest
+#        image: registry.redhat.io/openshift4/ose-cli:v4.17.0
         volumeMounts:
         - name: windows-install-scripts
           mountPath: /scripts
