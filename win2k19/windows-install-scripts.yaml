@@ -76,7 +76,7 @@ data:
           name: windows-install-rootdisk
       pvc:
         accessModes:
-        - ReadWriteOnce
+        - ReadWriteMany
         resources:
           requests:
             storage: 22Gi
