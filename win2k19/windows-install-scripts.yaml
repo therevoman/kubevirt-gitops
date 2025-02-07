@@ -122,15 +122,10 @@ data:
           name: windows-install-rootdisk
       pvc:
         accessModes:
-        - ReadWriteOnce
-        volumeMode: Block
+        - ReadWriteMany
         resources:
           requests:
-<<<<<<< HEAD
             storage: 60Gi
-=======
-            storage: 22Gi
->>>>>>> 1e29a71 (Updated configmap)
   install.sh: |
     #!/bin/sh
 
