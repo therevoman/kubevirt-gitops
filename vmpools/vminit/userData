@@ -32,7 +32,11 @@ write_files:
     owner: apache:apache
 
 mounts:
+<<<<<<< HEAD
   - [ /dev/disk/by-id/virtio-netsetup, /opt, iso9660, 'defaults' ] 
+=======
+  - [ /dev/disk/by-id/virtio-netsetup, /opt, iso9660, 'defaults' ]
+>>>>>>> 638cdde (pending changes)
 
 runcmd:
   - [systemctl, daemon-reload]
