@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm-pool-cirros-ssh
+spec:
+  type: ClusterIP
+  selector:
+    kubevirt.io/vmpool: vm-pool-cirros
+  ports:
+    - protocol: TCP
+      port: 2222
+      targetPort: 22

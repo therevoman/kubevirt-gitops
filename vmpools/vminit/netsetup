@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# This script exists to make it easier to test non-persistent network settings
+
+function write_status {
+  mkdir -p /var/www/html
+  {
+    echo -n "<html> ";
+    echo -n "<head> ";
+    echo "<title>Server ";
+    hostname;
+    echo -n " info</title> ";
+    echo -n "</head> ";
+    echo -n "<h1>Host:</h1> ";
+    hostname;
+    echo "<h1>IPs</h1><pre>";
+    ip -br a;
+    echo "</pre><h1>Links</h1><pre>";
+    ip -br link;
+    echo "</pre><h1>Routes</h1><pre>";
+    ip -br route;
+    echo "</pre>";
+    echo -n "</html> ";
+  } | tee -a /var/www/html/index.html
+}
+
+
+write_status
+#nettest
