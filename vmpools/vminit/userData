@@ -1,0 +1,44 @@
+# taken in-part or wholly from https://github.com/dlbewley/demo-virt/blob/main/demos/vms-w-firewall/scripts/userData
+#cloud-config
+users:
+  - name: cloud-user
+    lock_passwd: false
+    plain_text_passwd: EXAMPLE
+    groups: wheel
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC6uWWODJRIfsz7yxvp6E/vSkHmxhknKadoLcgRCIJEvyhyTcGe68XJrv83jTxJbIl/zfwDAPmmzE3Ky4Ay8p3hCddKwjFUodekND70bnG/S4PYOAJmiIvrwb8ZQfAK8dwQz3f4uw6Fz8g2+1OU09doMze9k9TaSNinOGjH6ft+jp6yJ+K+LneKpOFgsF0vPi4AavDzd2gw87XfgTd8j3PP2+y/S6n2hqI2SbMbTvBd0zhqknLaB14t/1QFLiUm4jGjKZJAhvamS3MEe6vfBx7TPeJtPr5qt7GdkX349oaeQIEdQZojL7C156HbtfPlqtFCUacePH9mKxUhX5wWq710lm8zlLIa+SD9RnxmQmvzltOfl1dDOOodpMLUJTUz5+vH/C3IA4nwRONwXMSTrauLqL6gNEuNh4POCgISL920cGFAV1sC/7lT+e39XEd1xiH1xy32ywgzM8+/zmk532uHH0EMexzz6qqGMmbAECz+4rBD/AfbuoWU7Y6zrkBHxoc= nrevo@lappy
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - openshift-clients
+  - httpd
+  - php
+  - jq
+
+write_files:
+  - content: |
+      #!/bin/bash
+      bash /opt/netsetup $@
+    path: /usr/local/bin/netsetup
+    permissions: '0755'
+    owner: root:root
+  - content: |
+      <?php phpinfo(); ?>
+    path: /var/www/html/info.php
+    permissions: '0755'
+    owner: apache:apache
+
+mounts:
+  - [ /dev/disk/by-id/virtio-netsetup, /opt, iso9660, 'defaults' ]
+
+runcmd:
+  - [systemctl, daemon-reload]
+  - [sed, -iE, 's/^Listen 80/Listen 8080/', /etc/httpd/conf/httpd.conf]
+  - [systemctl, enable, httpd.service]
+  - [systemctl, start, --no-block, httpd.service]
+  # scriptgs here do not reliably run every time for some reason
+  # maybe use a oneshot service that waits for the fs mount?
+#cloud-config

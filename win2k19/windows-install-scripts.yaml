@@ -77,6 +77,7 @@ data:
       pvc:
         accessModes:
         - ReadWriteMany
+        volumeMode: Block
         resources:
           requests:
             storage: 12Gi

@@ -1,0 +1,4 @@
+resources:
+- virtualmachinepool.yaml
+- horizontalpodautoscaler.yaml
+- service.yaml
