@@ -1,65 +1,77 @@
 apiVersion: v1
 data:
-  autounattend.xml: "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<unattend xmlns=\"urn:schemas-microsoft-com:unattend\">\n
-    \   <settings pass=\"windowsPE\">\n        <component name=\"Microsoft-Windows-Setup\"
+  autounattend.xml: "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<unattend xmlns=\"urn:schemas-microsoft-com:unattend\"
+    xmlns:wcm=\"http://schemas.microsoft.com/WMIConfig/2002/State\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"
+    xsi:schemaLocation=\"urn:schemas-microsoft-com:unattend\">\n  <settings pass=\"windowsPE\">\n
+    \   <component name=\"Microsoft-Windows-Setup\" processorArchitecture=\"amd64\"
+    publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\n
+    \     <DiskConfiguration>\n        <Disk wcm:action=\"add\">\n          <CreatePartitions>\n
+    \           <CreatePartition wcm:action=\"add\">\n              <Order>1</Order>\n
+    \             <Extend>true</Extend>\n              <Type>Primary</Type>\n            </CreatePartition>\n
+    \         </CreatePartitions>\n          <ModifyPartitions>\n            <ModifyPartition
+    wcm:action=\"add\">\n              <Active>true</Active>\n              <Format>NTFS</Format>\n
+    \             <Label>System</Label>\n              <Order>1</Order>\n              <PartitionID>1</PartitionID>\n
+    \           </ModifyPartition>\n          </ModifyPartitions>\n          <DiskID>0</DiskID>\n
+    \         <WillWipeDisk>true</WillWipeDisk>\n        </Disk>\n      </DiskConfiguration>\n
+    \     <ImageInstall>\n        <OSImage>\n          <InstallFrom>\n            <MetaData
+    wcm:action=\"add\">\n              <Key>/IMAGE/NAME</Key>\n              <Value>Windows
+    Server 2019 SERVERSTANDARD</Value>\n            </MetaData>\n          </InstallFrom>\n
+    \         <InstallTo>\n            <DiskID>0</DiskID>\n            <PartitionID>1</PartitionID>\n
+    \         </InstallTo>\n        </OSImage>\n      </ImageInstall>\n      <UserData>\n
+    \       <AcceptEula>true</AcceptEula>\n        <FullName>Administrator</FullName>\n
+    \       <Organization>My Organization</Organization>\n      </UserData>\n      <EnableFirewall>false</EnableFirewall>\n
+    \   </component>\n    <component name=\"Microsoft-Windows-International-Core-WinPE\"
     processorArchitecture=\"amd64\" publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\"
-    versionScope=\"nonSxS\" xmlns:wcm=\"http://schemas.microsoft.com/WMIConfig/2002/State\"
-    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n            <UserData>\n
-    \               <AcceptEula>true</AcceptEula>\n                <Organization>local</Organization>\n
-    \               <FullName>user</FullName>\n            </UserData>\n            <DiskConfiguration>\n
-    \               <Disk wcm:action=\"add\">\n                    <CreatePartitions>\n
-    \                       <CreatePartition wcm:action=\"add\">\n                            <Order>1</Order>\n
-    \                           <Size>500</Size>\n                            <Type>Primary</Type>\n
-    \                       </CreatePartition>\n                        <CreatePartition
-    wcm:action=\"add\">\n\t\t\t    <Order>2</Order>\n\t\t\t    <Extend>true</Extend>\n
-    \                           <Type>Primary</Type>\n                        </CreatePartition>\n
-    \                   </CreatePartitions>\n                    <ModifyPartitions>\n
-    \                       <ModifyPartition wcm:action=\"add\">\n                            <Format>NTFS</Format>\n
-    \                           <Label>System</Label>\n                            <PartitionID>1</PartitionID>\n
-    \                           <TypeID>0x27</TypeID>\n\t\t\t    <Order>1</Order>\n
-    \                       </ModifyPartition>\n                        <ModifyPartition
-    wcm:action=\"add\">\n                            <Letter>C</Letter>\n                            <Order>2</Order>\n
-    \                           <PartitionID>2</PartitionID>\n                            <Format>NTFS</Format>\n
-    \                       </ModifyPartition>\n                    </ModifyPartitions>\n
-    \                   <DiskID>0</DiskID>\n                    <WillWipeDisk>true</WillWipeDisk>\n
-    \               </Disk>\n            </DiskConfiguration>\n            <ImageInstall>\n
-    \               <OSImage>\n                    <InstallFrom>\n                        <MetaData
-    wcm:action=\"add\">\n                            <Key>/IMAGE/INDEX</Key>\n                            <Value>2</Value>\n
-    \                       </MetaData>\n                    </InstallFrom>\n                    <InstallTo>\n
-    \                       <DiskID>0</DiskID>\n                        <PartitionID>2</PartitionID>\n
-    \                   </InstallTo>\n                </OSImage>\n            </ImageInstall>\n
-    \       </component>\n        <component name=\"Microsoft-Windows-International-Core-WinPE\"
-    processorArchitecture=\"amd64\" publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\"
-    versionScope=\"nonSxS\" xmlns:wcm=\"http://schemas.microsoft.com/WMIConfig/2002/State\"
-    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n            <SetupUILanguage>\n
-    \               <UILanguage>en-us</UILanguage>\n                <WillShowUI>Always</WillShowUI>\n
-    \           </SetupUILanguage>\n            <InputLocale>en-us</InputLocale>\n
-    \           <SystemLocale>en-us</SystemLocale>\n            <UILanguage>en-us</UILanguage>\n
-    \           <UserLocale>en-us</UserLocale>\n        </component>\n        <component
-    name=\"Microsoft-Windows-PnpCustomizationsWinPE\" processorArchitecture=\"amd64\"
+    versionScope=\"nonSxS\">\n      <SetupUILanguage>\n        <UILanguage>en-US</UILanguage>\n
+    \     </SetupUILanguage>\n      <InputLocale>en-US</InputLocale>\n      <SystemLocale>en-US</SystemLocale>\n
+    \     <UILanguage>en-US</UILanguage>\n      <UserLocale>en-US</UserLocale>\n    </component>\n
+    \   <component name=\"Microsoft-Windows-PnpCustomizationsWinPE\" processorArchitecture=\"amd64\"
     publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\"
     xmlns:wcm=\"http://schemas.microsoft.com/WMIConfig/2002/State\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n
-    \           <DriverPaths>\n                <PathAndCredentials wcm:keyValue=\"4b29ba63\"
-    wcm:action=\"add\">\n                    <Path>E:\\amd64\\2k19</Path>\n                </PathAndCredentials>\n
-    \               <PathAndCredentials wcm:keyValue=\"25fe51ea\" wcm:action=\"add\">\n
-    \                   <Path>E:\\NetKVM\\2k19\\amd64</Path>\n                </PathAndCredentials>\n
-    \           </DriverPaths>\n        </component>\n    </settings>\n    <settings
-    pass=\"oobeSystem\">\n        <component name=\"Microsoft-Windows-Shell-Setup\"
-    processorArchitecture=\"amd64\" publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\"
-    versionScope=\"nonSxS\" xmlns:wcm=\"http://schemas.microsoft.com/WMIConfig/2002/State\"
-    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n            <UserAccounts>\n
-    \               <AdministratorPassword>\n                    <Value>QQBhADEAMgAzADQANQA2AEEAZABtAGkAbgBpAHMAdAByAGEAdABvAHIAUABhAHMAcwB3AG8AcgBkAA==</Value>\n
-    \                   <PlainText>false</PlainText>\n                </AdministratorPassword>\n\t
-    \   </UserAccounts>\n\t    \t<AutoLogon>\n                <Password>\n                    <Value>QQBhADEAMgAzADQANQA2AFAAYQBzAHMAdwBvAHIAZAA=</Value>\n
-    \                   <PlainText>false</PlainText>\n                </Password>\n
-    \               <Enabled>true</Enabled>\n                <LogonCount>1</LogonCount>\n
-    \               <Username>Administrator</Username>\n\t\t</AutoLogon>\n            <FirstLogonCommands>\n
-    \               <SynchronousCommand wcm:action=\"add\">\n\t            <CommandLine>powershell
-    -noexit f:\\post-install.ps1\n\t\t    </CommandLine>\n                    <RequiresUserInput>false</RequiresUserInput>\n
-    \                   <Order>1</Order>\n\t\t    <Description>Post Installation Script</Description>\n\t\t</SynchronousCommand>\n
-    \           </FirstLogonCommands>\n        </component>\n</settings>\n    <cpi:offlineImage
-    cpi:source=\"wim:c:/users/administrator/documents/install.wim#Windows Server 2019
-    SERVERSTANDARD\" xmlns:cpi=\"urn:schemas-microsoft-com:cpi\" />\n</unattend>\n"
+    \       <DriverPaths>\n            <PathAndCredentials wcm:keyValue=\"4b29ba63\"
+    wcm:action=\"add\">\n                <Path>E:\\amd64\\2k19</Path>\n            </PathAndCredentials>\n
+    \           <PathAndCredentials wcm:keyValue=\"25fe51ea\" wcm:action=\"add\">\n
+    \               <Path>E:\\NetKVM\\2k19\\amd64</Path>\n            </PathAndCredentials>\n
+    \       </DriverPaths>\n    </component>\n  </settings>\n  <settings pass=\"offlineServicing\">\n
+    \   <component name=\"Microsoft-Windows-LUA-Settings\" processorArchitecture=\"amd64\"
+    publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\n
+    \     <EnableLUA>false</EnableLUA>\n    </component>\n  </settings>\n  <settings
+    pass=\"specialize\">\n    <component name=\"Microsoft-Windows-Shell-Setup\" processorArchitecture=\"amd64\"
+    publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\n
+    \     <AutoLogon>\n        <Password>\n          <Value>R3dh4t1!</Value>\n          <PlainText>true</PlainText>\n
+    \       </Password>\n        <Enabled>true</Enabled>\n        <LogonCount>999</LogonCount>\n
+    \       <Username>Administrator</Username>\n      </AutoLogon>\n      <OOBE>\n
+    \       <HideEULAPage>true</HideEULAPage>\n        <HideLocalAccountScreen>true</HideLocalAccountScreen>\n
+    \       <HideOnlineAccountScreens>true</HideOnlineAccountScreens>\n        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>\n
+    \       <NetworkLocation>Work</NetworkLocation>\n        <ProtectYourPC>3</ProtectYourPC>\n
+    \       <SkipMachineOOBE>true</SkipMachineOOBE>\n      </OOBE>\n      <UserAccounts>\n
+    \       <LocalAccounts>\n          <LocalAccount wcm:action=\"add\">\n            <Description>Local
+    Administrator Account</Description>\n            <DisplayName>Administrator</DisplayName>\n
+    \           <Group>Administrators</Group>\n            <Name>Administrator</Name>\n
+    \         </LocalAccount>\n        </LocalAccounts>\n      </UserAccounts>\n      <TimeZone>Mountain
+    Standard Time</TimeZone>\n    </component>\n  </settings>\n  <settings pass=\"oobeSystem\">\n
+    \   <component name=\"Microsoft-Windows-International-Core\" processorArchitecture=\"amd64\"
+    publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\n
+    \     <InputLocale>en-US</InputLocale>\n      <SystemLocale>en-US</SystemLocale>\n
+    \     <UILanguage>en-US</UILanguage>\n      <UserLocale>en-US</UserLocale>\n    </component>\n
+    \   <component name=\"Microsoft-Windows-Shell-Setup\" processorArchitecture=\"amd64\"
+    publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\n
+    \     <AutoLogon>\n        <Password>\n          <Value>R3dh4t1!</Value>\n          <PlainText>true</PlainText>\n
+    \       </Password>\n        <Enabled>true</Enabled>\n        <LogonCount>999</LogonCount>\n
+    \       <Username>Administrator</Username>\n      </AutoLogon>\n      <FirstLogonCommands>\n
+    \       <SynchronousCommand wcm:action=\"add\">\n\t        <CommandLine>powershell
+    -noexit f:\\post-install.ps1\n\t\t    </CommandLine>\n            <RequiresUserInput>false</RequiresUserInput>\n
+    \           <Order>1</Order>\n            <Description>Post Installation Script</Description>\n
+    \   \t    </SynchronousCommand>\n      </FirstLogonCommands>\n      <OOBE>\n        <HideEULAPage>true</HideEULAPage>\n
+    \       <HideLocalAccountScreen>true</HideLocalAccountScreen>\n        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>\n
+    \       <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>\n        <NetworkLocation>Work</NetworkLocation>\n
+    \       <ProtectYourPC>3</ProtectYourPC>\n        <SkipMachineOOBE>true</SkipMachineOOBE>\n
+    \     </OOBE>\n      <UserAccounts>\n        <LocalAccounts>\n          <LocalAccount
+    wcm:action=\"add\">\n            <Description>Local Administrator Account</Description>\n
+    \           <DisplayName>Administrator</DisplayName>\n            <Group>Administrators</Group>\n
+    \           <Name>Administrator</Name>\n          </LocalAccount>\n        </LocalAccounts>\n
+    \     </UserAccounts>\n      <TimeZone>Mountain Standard Time</TimeZone>\n    </component>\n
+    \ </settings>\n</unattend>"
   clone-boot-source.yaml: |
     apiVersion: cdi.kubevirt.io/v1beta1
     kind: DataVolume
@@ -124,6 +136,78 @@ data:
     my_app_name=$(oc get cm windows-install-scripts -o jsonpath='{.metadata.labels.app\.kubernetes\.io/instance}')
 
     echo "Finished"
+  new-autounattend.xml: "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<unattend xmlns=\"urn:schemas-microsoft-com:unattend\"
+    xmlns:wcm=\"http://schemas.microsoft.com/WMIConfig/2002/State\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"
+    xsi:schemaLocation=\"urn:schemas-microsoft-com:unattend\">\n  <settings pass=\"windowsPE\">\n
+    \   <component name=\"Microsoft-Windows-Setup\" processorArchitecture=\"amd64\"
+    publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\n
+    \     <DiskConfiguration>\n        <Disk wcm:action=\"add\">\n          <CreatePartitions>\n
+    \           <CreatePartition wcm:action=\"add\">\n              <Order>1</Order>\n
+    \             <Extend>true</Extend>\n              <Type>Primary</Type>\n            </CreatePartition>\n
+    \         </CreatePartitions>\n          <ModifyPartitions>\n            <ModifyPartition
+    wcm:action=\"add\">\n              <Active>true</Active>\n              <Format>NTFS</Format>\n
+    \             <Label>System</Label>\n              <Order>1</Order>\n              <PartitionID>1</PartitionID>\n
+    \           </ModifyPartition>\n          </ModifyPartitions>\n          <DiskID>0</DiskID>\n
+    \         <WillWipeDisk>true</WillWipeDisk>\n        </Disk>\n      </DiskConfiguration>\n
+    \     <ImageInstall>\n        <OSImage>\n          <InstallFrom>\n            <MetaData
+    wcm:action=\"add\">\n              <Key>/IMAGE/NAME</Key>\n              <Value>Windows
+    Server 2019 SERVERSTANDARD</Value>\n            </MetaData>\n          </InstallFrom>\n
+    \         <InstallTo>\n            <DiskID>0</DiskID>\n            <PartitionID>1</PartitionID>\n
+    \         </InstallTo>\n        </OSImage>\n      </ImageInstall>\n      <UserData>\n
+    \       <AcceptEula>true</AcceptEula>\n        <FullName>Administrator</FullName>\n
+    \       <Organization>My Organization</Organization>\n      </UserData>\n      <EnableFirewall>false</EnableFirewall>\n
+    \   </component>\n    <component name=\"Microsoft-Windows-International-Core-WinPE\"
+    processorArchitecture=\"amd64\" publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\"
+    versionScope=\"nonSxS\">\n      <SetupUILanguage>\n        <UILanguage>en-US</UILanguage>\n
+    \     </SetupUILanguage>\n      <InputLocale>en-US</InputLocale>\n      <SystemLocale>en-US</SystemLocale>\n
+    \     <UILanguage>en-US</UILanguage>\n      <UserLocale>en-US</UserLocale>\n    </component>\n
+    \   <component name=\"Microsoft-Windows-PnpCustomizationsWinPE\" processorArchitecture=\"amd64\"
+    publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\"
+    xmlns:wcm=\"http://schemas.microsoft.com/WMIConfig/2002/State\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n
+    \       <DriverPaths>\n            <PathAndCredentials wcm:keyValue=\"4b29ba63\"
+    wcm:action=\"add\">\n                <Path>E:\\amd64\\2k19</Path>\n            </PathAndCredentials>\n
+    \           <PathAndCredentials wcm:keyValue=\"25fe51ea\" wcm:action=\"add\">\n
+    \               <Path>E:\\NetKVM\\2k19\\amd64</Path>\n            </PathAndCredentials>\n
+    \       </DriverPaths>\n    </component>\n  </settings>\n  <settings pass=\"offlineServicing\">\n
+    \   <component name=\"Microsoft-Windows-LUA-Settings\" processorArchitecture=\"amd64\"
+    publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\n
+    \     <EnableLUA>false</EnableLUA>\n    </component>\n  </settings>\n  <settings
+    pass=\"specialize\">\n    <component name=\"Microsoft-Windows-Shell-Setup\" processorArchitecture=\"amd64\"
+    publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\n
+    \     <AutoLogon>\n        <Password>\n          <Value>R3dh4t1!</Value>\n          <PlainText>true</PlainText>\n
+    \       </Password>\n        <Enabled>true</Enabled>\n        <LogonCount>999</LogonCount>\n
+    \       <Username>Administrator</Username>\n      </AutoLogon>\n      <OOBE>\n
+    \       <HideEULAPage>true</HideEULAPage>\n        <HideLocalAccountScreen>true</HideLocalAccountScreen>\n
+    \       <HideOnlineAccountScreens>true</HideOnlineAccountScreens>\n        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>\n
+    \       <NetworkLocation>Work</NetworkLocation>\n        <ProtectYourPC>3</ProtectYourPC>\n
+    \       <SkipMachineOOBE>true</SkipMachineOOBE>\n      </OOBE>\n      <UserAccounts>\n
+    \       <LocalAccounts>\n          <LocalAccount wcm:action=\"add\">\n            <Description>Local
+    Administrator Account</Description>\n            <DisplayName>Administrator</DisplayName>\n
+    \           <Group>Administrators</Group>\n            <Name>Administrator</Name>\n
+    \         </LocalAccount>\n        </LocalAccounts>\n      </UserAccounts>\n      <TimeZone>Mountain
+    Standard Time</TimeZone>\n    </component>\n  </settings>\n  <settings pass=\"oobeSystem\">\n
+    \   <component name=\"Microsoft-Windows-International-Core\" processorArchitecture=\"amd64\"
+    publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\n
+    \     <InputLocale>en-US</InputLocale>\n      <SystemLocale>en-US</SystemLocale>\n
+    \     <UILanguage>en-US</UILanguage>\n      <UserLocale>en-US</UserLocale>\n    </component>\n
+    \   <component name=\"Microsoft-Windows-Shell-Setup\" processorArchitecture=\"amd64\"
+    publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\n
+    \     <AutoLogon>\n        <Password>\n          <Value>R3dh4t1!</Value>\n          <PlainText>true</PlainText>\n
+    \       </Password>\n        <Enabled>true</Enabled>\n        <LogonCount>999</LogonCount>\n
+    \       <Username>Administrator</Username>\n      </AutoLogon>\n      <FirstLogonCommands>\n
+    \       <SynchronousCommand wcm:action=\"add\">\n\t        <CommandLine>powershell
+    -noexit f:\\post-install.ps1\n\t\t    </CommandLine>\n            <RequiresUserInput>false</RequiresUserInput>\n
+    \           <Order>1</Order>\n            <Description>Post Installation Script</Description>\n
+    \   \t    </SynchronousCommand>\n      </FirstLogonCommands>\n      <OOBE>\n        <HideEULAPage>true</HideEULAPage>\n
+    \       <HideLocalAccountScreen>true</HideLocalAccountScreen>\n        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>\n
+    \       <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>\n        <NetworkLocation>Work</NetworkLocation>\n
+    \       <ProtectYourPC>3</ProtectYourPC>\n        <SkipMachineOOBE>true</SkipMachineOOBE>\n
+    \     </OOBE>\n      <UserAccounts>\n        <LocalAccounts>\n          <LocalAccount
+    wcm:action=\"add\">\n            <Description>Local Administrator Account</Description>\n
+    \           <DisplayName>Administrator</DisplayName>\n            <Group>Administrators</Group>\n
+    \           <Name>Administrator</Name>\n          </LocalAccount>\n        </LocalAccounts>\n
+    \     </UserAccounts>\n      <TimeZone>Mountain Standard Time</TimeZone>\n    </component>\n
+    \ </settings>\n</unattend>"
   post-install.ps1: |
     # Create Workdir
     $BasePath = "C:\Windows\Temp\Install"
