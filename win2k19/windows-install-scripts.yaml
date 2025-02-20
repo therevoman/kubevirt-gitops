@@ -92,7 +92,7 @@ data:
         volumeMode: Block
         resources:
           requests:
-            storage: 12Gi
+            storage: 60Gi
   install.sh: |
     #!/bin/sh
 
@@ -260,26 +260,39 @@ data:
     \ annotations:\n    name.os.template.kubevirt.io/win2k19: Microsoft Windows Server
     2019\n    description: windows-install\n  labels:\n    app: windows-install\n
     \ name: windows-install\nspec:\n  runStrategy: RerunOnFailure\n  template:\n    metadata:\n
-    \     labels:\n        kubevirt.io/domain: windows-install\n        vm.kubevirt.io/name:
+    \     annotations:\n        vm.kubevirt.io/os: windows2k19\n        vm.kubevirt.io/workload:
+    server\n      labels:\n        kubevirt.io/domain: windows-install\n        vm.kubevirt.io/name:
     windows-install\n        workload.template.kubevirt.io/server: 'true'\n    spec:\n
-    \     domain:\n        cpu:\n          cores: 2\n        devices:\n          disks:\n
-    \         - name: windows-install-rootdisk\n            disk:\n              bus:
-    sata\n          - name: win2k19-install-iso\n            bootOrder: 1\n            cdrom:\n
-    \             bus: sata\n          - name: windows-guest-tools\n            cdrom:\n
-    \             bus: sata\n          - name: windows-install-scripts\n            cdrom:\n
-    \             bus: sata\n          interfaces:\n          - name: default\n            model:
-    virtio\n            masquerade: {}\n          networkInterfaceMultiqueue: true\n
-    \         rng: {}\n        machine:\n          type: pc-q35-rhel8.4.0\n        resources:\n
-    \         requests:\n            memory: 4Gi\n      evictionStrategy: LiveMigrate\n
-    \     hostname: windows-install\n      networks:\n      - name: default\n        pod:
-    {}\n      terminationGracePeriodSeconds: 180\n      volumes:\n      - name: windows-install-rootdisk
-    \n        dataVolume:\n          name: windows-install-rootdisk\n      - name:
-    win2k19-install-iso\n        persistentVolumeClaim:\n          claimName: win2k19-install-iso\n
-    \     - name: windows-guest-tools\n        containerDisk:\n          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.17\n
+    \     architecture: amd64\n      domain:\n        clock:\n          timer:\n            hpet:\n
+    \             present: false\n            hyperv: {}\n            pit:\n              tickPolicy:
+    delay\n            rtc:\n              tickPolicy: catchup\n          utc: {}\n
+    \       cpu:\n          cores: 1\n          sockets: 2\n          threads: 1\n
+    \       devices:\n          disks:\n          - name: windows-install-rootdisk\n
+    \           disk:\n              bus: virtio\n          - name: win2k19-install-iso\n
+    \           bootOrder: 1\n            cdrom:\n              bus: sata\n          -
+    name: windows-guest-tools\n            cdrom:\n              bus: sata\n          -
+    name: windows-install-scripts\n            cdrom:\n              bus: sata\n          inputs:\n
+    \           - bus: usb\n              name: tablet\n              type: tablet\n
+    \         interfaces:\n          - name: default\n            model: virtio\n
+    \           masquerade: {}\n          networkInterfaceMultiqueue: true\n          rng:
+    {}\n          logSerialConsole: false\n        features:\n          acpi: {}\n
+    \         apic: {}\n          hyperv:\n            reenlightenment: {}\n            ipi:
+    {}\n            synic: {}\n            synictimer:\n              direct: {}\n
+    \           spinlocks:\n              spinlocks: 8191\n            reset: {}\n
+    \           relaxed: {}\n            vpindex: {}\n            runtime: {}\n            tlbflush:
+    {}\n            frequencies: {}\n            vapic: {}\n          smm: {}\n        firmware:\n
+    \         bootloader:\n            efi:\n              secureBoot: true\n        machine:\n
+    \         type: pc-q35-rhel9.4.0\n        memory:\n          guest: 4Gi\n      evictionStrategy:
+    LiveMigrate\n      hostname: windows-install\n      networks:\n      - name: default\n
+    \       pod: {}\n      terminationGracePeriodSeconds: 180\n      volumes:\n      -
+    name: windows-install-rootdisk \n        dataVolume:\n          name: windows-install-rootdisk\n
+    \     - name: win2k19-install-iso\n        persistentVolumeClaim:\n          claimName:
+    win2k19-install-iso\n      - name: windows-guest-tools\n        containerDisk:\n
+    \         image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.17\n
     \     - name: windows-install-scripts\n        configMap:\n          name: windows-install-scripts\n
     \ dataVolumeTemplates:\n  - metadata:\n      name: windows-install-rootdisk\n
     \   spec:\n      pvc:\n        accessModes:\n        - ReadWriteMany\n        volumeMode:
-    Block\n        resources:\n          requests:\n            storage: 12Gi\n      source:\n
+    Block\n        resources:\n          requests:\n            storage: 60Gi\n      source:\n
     \       blank: {}\n"
 kind: ConfigMap
 metadata:

@@ -11,19 +11,35 @@ spec:
   runStrategy: RerunOnFailure
   template:
     metadata:
+      annotations:
+        vm.kubevirt.io/os: windows2k19
+        vm.kubevirt.io/workload: server
       labels:
         kubevirt.io/domain: windows-install
         vm.kubevirt.io/name: windows-install
         workload.template.kubevirt.io/server: 'true'
     spec:
+      architecture: amd64
       domain:
+        clock:
+          timer:
+            hpet:
+              present: false
+            hyperv: {}
+            pit:
+              tickPolicy: delay
+            rtc:
+              tickPolicy: catchup
+          utc: {}
         cpu:
-          cores: 2
+          cores: 1
+          sockets: 2
+          threads: 1
         devices:
           disks:
           - name: windows-install-rootdisk
             disk:
-              bus: sata
+              bus: virtio
           - name: win2k19-install-iso
             bootOrder: 1
             cdrom:
@@ -34,17 +50,44 @@ spec:
           - name: windows-install-scripts
             cdrom:
               bus: sata
+          inputs:
+            - bus: usb
+              name: tablet
+              type: tablet
           interfaces:
           - name: default
             model: virtio
             masquerade: {}
           networkInterfaceMultiqueue: true
           rng: {}
+          logSerialConsole: false
+        features:
+          acpi: {}
+          apic: {}
+          hyperv:
+            reenlightenment: {}
+            ipi: {}
+            synic: {}
+            synictimer:
+              direct: {}
+            spinlocks:
+              spinlocks: 8191
+            reset: {}
+            relaxed: {}
+            vpindex: {}
+            runtime: {}
+            tlbflush: {}
+            frequencies: {}
+            vapic: {}
+          smm: {}
+        firmware:
+          bootloader:
+            efi:
+              secureBoot: true
         machine:
-          type: pc-q35-rhel8.4.0
-        resources:
-          requests:
-            memory: 4Gi
+          type: pc-q35-rhel9.4.0
+        memory:
+          guest: 4Gi
       evictionStrategy: LiveMigrate
       hostname: windows-install
       networks:
@@ -74,6 +117,6 @@ spec:
         volumeMode: Block
         resources:
           requests:
-            storage: 12Gi
+            storage: 60Gi
       source:
         blank: {}

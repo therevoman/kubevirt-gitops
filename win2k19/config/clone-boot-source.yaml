@@ -17,4 +17,4 @@ spec:
     volumeMode: Block
     resources:
       requests:
-        storage: 12Gi
+        storage: 60Gi
