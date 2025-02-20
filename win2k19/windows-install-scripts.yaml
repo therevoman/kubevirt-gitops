@@ -312,11 +312,7 @@ data:
   windows-install-vm.yaml: "apiVersion: kubevirt.io/v1\nkind: VirtualMachine\nmetadata:\n
     \ annotations:\n    name.os.template.kubevirt.io/win2k19: Microsoft Windows Server
     2019\n    description: windows-install\n  labels:\n    app: windows-install\n
-<<<<<<< HEAD
     \ name: windows-install\nspec:\n  runStrategy: Manual\n  template:\n    metadata:\n
-=======
-    \ name: windows-install\nspec:\n  runStrategy: RerunOnFailure\n  template:\n    metadata:\n
->>>>>>> c49e7b5 (Update install scripts again to make space for updates)
     \     annotations:\n        vm.kubevirt.io/os: windows2k19\n        vm.kubevirt.io/workload:
     server\n      labels:\n        kubevirt.io/domain: windows-install\n        vm.kubevirt.io/name:
     windows-install\n        workload.template.kubevirt.io/server: 'true'\n    spec:\n
@@ -325,11 +321,7 @@ data:
     delay\n            rtc:\n              tickPolicy: catchup\n          utc: {}\n
     \       cpu:\n          cores: 1\n          sockets: 2\n          threads: 1\n
     \       devices:\n          disks:\n          - name: windows-install-rootdisk\n
-<<<<<<< HEAD
-    \           disk:\n              bus: sata\n          - name: win2k19-install-iso\n
-=======
     \           disk:\n              bus: virtio\n          - name: win2k19-install-iso\n
->>>>>>> c49e7b5 (Update install scripts again to make space for updates)
     \           bootOrder: 1\n            cdrom:\n              bus: sata\n          -
     name: windows-guest-tools\n            cdrom:\n              bus: sata\n          -
     name: windows-install-scripts\n            cdrom:\n              bus: sata\n          inputs:\n
@@ -352,21 +344,9 @@ data:
     \         image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.17\n
     \     - name: windows-install-scripts\n        configMap:\n          name: windows-install-scripts\n
     \ dataVolumeTemplates:\n  - metadata:\n      name: windows-install-rootdisk\n
-<<<<<<< HEAD
     \   spec:\n      pvc:\n        accessModes:\n        - ReadWriteMany\n        volumeMode:
     Block\n        resources:\n          requests:\n            storage: 60Gi\n      source:\n
     \       blank: {}\n"
-=======
-<<<<<<< HEAD
-    \   spec:\n      pvc:\n        accessModes:\n        - ReadWriteOnce\n        resources:\n
-    \         requests:\n            storage: 22Gi\n      source:\n        blank:
-    {}\n"
-=======
-    \   spec:\n      pvc:\n        accessModes:\n        - ReadWriteMany\n        volumeMode:
-    Block\n        resources:\n          requests:\n            storage: 60Gi\n      source:\n
-    \       blank: {}\n"
->>>>>>> 3b1af0a (Update install scripts again to make space for updates)
->>>>>>> c49e7b5 (Update install scripts again to make space for updates)
 kind: ConfigMap
 metadata:
   creationTimestamp: null
