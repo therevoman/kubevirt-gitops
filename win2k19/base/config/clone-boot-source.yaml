@@ -19,3 +19,9 @@ spec:
         requests:
           storage: 60Gi
     volumeMode: Block
+<<<<<<< HEAD
+=======
+    resources:
+      requests:
+        storage: 60Gi
+>>>>>>> c49e7b5 (Update install scripts again to make space for updates)
