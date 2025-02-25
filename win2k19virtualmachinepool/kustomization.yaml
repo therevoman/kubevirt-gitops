@@ -1,0 +1,4 @@
+resources:
+- win2k19virtualmachinepool.yaml
+- win2k19horizontalpodautoscaler.yaml
+- win2k19service.yaml
