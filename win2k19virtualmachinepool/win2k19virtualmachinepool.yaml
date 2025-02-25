@@ -1,0 +1,116 @@
+apiVersion: pool.kubevirt.io/v1alpha1
+kind: VirtualMachinePool
+metadata:
+  name: vm-pool-win2k19
+  namespace: nrevo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      kubevirt.io/vmpool: vm-pool-win2k19
+  virtualMachineTemplate:
+    metadata:
+      creationTimestamp: null
+      labels:
+        kubevirt.io/vmpool: vm-pool-win2k19
+    spec:
+      runStrategy: Always
+      dataVolumeTemplates:
+        - apiVersion: cdi.kubevirt.io/v1beta1
+          kind: DataVolume
+          metadata:
+            creationTimestamp: null
+            name: win2k19-amethyst-prawn-24
+          spec:
+            sourceRef:
+              kind: DataSource
+              name: win2k19
+              namespace: openshift-virtualization-os-images
+            storage:
+              resources:
+                requests:
+                  storage: 60Gi
+      template:
+        metadata:
+          annotations:
+            vm.kubevirt.io/flavor: medium
+            vm.kubevirt.io/os: windows2k19
+            vm.kubevirt.io/workload: server
+          creationTimestamp: null
+          labels:
+            kubevirt.io/domain: win2k19-amethyst-prawn-24
+            kubevirt.io/size: medium
+            network.kubevirt.io/headlessService: headless
+        spec:
+          architecture: amd64
+          domain:
+            clock:
+              timer:
+                hpet:
+                  present: false
+                hyperv: {}
+                pit:
+                  tickPolicy: delay
+                rtc:
+                  tickPolicy: catchup
+              utc: {}
+            cpu:
+              cores: 2
+              sockets: 1
+              threads: 1
+            devices:
+              disks:
+                - disk:
+                    bus: sata
+                  name: rootdisk
+                - cdrom:
+                    bus: sata
+                  name: windows-drivers-disk
+              inputs:
+                - bus: usb
+                  name: tablet
+                  type: tablet
+              interfaces:
+                - masquerade: {}
+                  model: e1000e
+                  name: default
+              logSerialConsole: false
+            features:
+              acpi: {}
+              apic: {}
+              hyperv:
+                reenlightenment: {}
+                ipi: {}
+                synic: {}
+                synictimer:
+                  direct: {}
+                spinlocks:
+                  spinlocks: 8191
+                reset: {}
+                relaxed: {}
+                vpindex: {}
+                runtime: {}
+                tlbflush: {}
+                frequencies: {}
+                vapic: {}
+              smm: {}
+            firmware:
+              bootloader:
+                efi:
+                  secureBoot: true
+            machine:
+              type: pc-q35-rhel9.4.0
+            memory:
+              guest: 4Gi
+            resources: {}
+          networks:
+            - name: default
+              pod: {}
+          terminationGracePeriodSeconds: 3600
+          volumes:
+            - dataVolume:
+                name: win2k19-amethyst-prawn-24
+              name: rootdisk
+            - containerDisk:
+                image: 'registry.redhat.io/container-native-virtualization/virtio-win-rhel9@sha256:e1b7710cebb2a1a1484807df2bce262e6cf230b60699b160cdd9db285db93018'
+              name: windows-drivers-disk
