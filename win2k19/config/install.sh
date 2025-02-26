@@ -19,6 +19,9 @@ while [ "$vmi_phase" != "Succeeded" ]
 do
     sleep 30
     vmi_phase=$(oc get vmi windows-install -o jsonpath='{.status.phase}')
+    if [ "$vmi_phase" == "" ]; then
+        vmi_phase="Succeeded"
+    fi
 done
 
 echo "VM has finished installing"
