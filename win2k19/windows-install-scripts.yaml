@@ -155,14 +155,14 @@ data:
     cd /scripts
 
     # https://hyperconverged-cluster-cli-download-openshift-cnv.apps.ocs.openshift.works/amd64/linux/virtctl.tar.gz
-    wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz
-    tar -xzvf virtctl.tar.gz
+    wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz -O /tmp/virtctl.tar.gz
+    tar -xzvf /tmp/virtctl.tar.gz -C /tmp/
 
     oc apply -f windows-install-vm.yaml
     echo "Applied VM"
     sleep 5
 
-    virtctl start windows-install
+    /tmp/virtctl start windows-install
     echo "Started VM, waiting for VM to start"
     sleep 5
 
