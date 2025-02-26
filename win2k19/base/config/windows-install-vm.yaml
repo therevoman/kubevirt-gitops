@@ -8,7 +8,7 @@ metadata:
     app: windows-install
   name: windows-install
 spec:
-  runStrategy: RerunOnFailure
+  runStrategy: Manual
   template:
     metadata:
       annotations:

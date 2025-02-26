@@ -10,7 +10,7 @@ Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 $CertName = "balloon.cer"
 $ExportCert = Join-Path $BasePath -ChildPath $CertName
 
-$Cert = (Get-AuthenticodeSignature "e:\Balloon\2k19\amd64\balloon.sys").SignerCertificate
+$Cert = (Get-AuthenticodeSignature "D:\Balloon\2k19\amd64\balloon.sys").SignerCertificate
 $ExportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert
 
 [System.IO.File]::WriteAllBytes($ExportCert, $Cert.Export($ExportType))
@@ -51,9 +51,15 @@ Copy-Item -Path 'F:\cloud*.conf' -Destination $CloudinitConfDir\
 Remove-item $BasePath -Recurse
 
 # Remove AutoLogin
-reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v AutoAdminLogon /t REG_SZ /d 0 /f
+# reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v AutoAdminLogon /t REG_SZ /d 0 /f
 
 # Run Sysprep and Shutdown
 
 cmd /C 'cd "C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\" && C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown /unattend:Unattend.xml'
-#cmd /C 'C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown'
+
+# Perform windows updates
+Install-Module PSWindowsUpdate -Force -AcceptLicense -Confirm
+Get-WindowsUpdate
+Install-WindowsUpdate -AcceptAll -AutoReboot
+
+Start-Sleep -Duration (New-TimeSpan -Seconds 600); Stop-Computer
