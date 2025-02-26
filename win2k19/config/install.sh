@@ -4,7 +4,7 @@ echo "Starting install script"
 cd /scripts
 
 # https://hyperconverged-cluster-cli-download-openshift-cnv.apps.ocs.openshift.works/amd64/linux/virtctl.tar.gz
-wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local/amd64/linux/virtctl.tar.gz
+wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz
 tar -xzvf virtctl.tar.gz
 
 oc apply -f windows-install-vm.yaml
