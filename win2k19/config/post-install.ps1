@@ -10,7 +10,9 @@ Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 $CertName = "balloon.cer"
 $ExportCert = Join-Path $BasePath -ChildPath $CertName
 
-$Cert = (Get-AuthenticodeSignature "D:\Balloon\2k19\amd64\balloon.sys").SignerCertificate
+#$Cert = (Get-AuthenticodeSignature "D:\Balloon\2k19\amd64\balloon.sys").SignerCertificate
+#$ExportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert
+$Cert = (Get-AuthenticodeSignature "E:\Balloon\2k19\amd64\balloon.sys").SignerCertificate
 $ExportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert
 
 [System.IO.File]::WriteAllBytes($ExportCert, $Cert.Export($ExportType))

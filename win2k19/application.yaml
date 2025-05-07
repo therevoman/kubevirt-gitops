@@ -11,7 +11,7 @@ spec:
   source:
     path: win2k19
     repoURL: https://github.com/therevoman/kubevirt-gitops.git
-    targetRevision: HEAD
+    targetRevision: bm
   syncPolicy:
     syncOptions:
     - CreateNamespace=false
