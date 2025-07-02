@@ -11,23 +11,23 @@ oc apply -f windows-install-vm.yaml
 echo "Applied VM"
 sleep 5
 
-/tmp/virtctl start windows-install
+/tmp/virtctl start windows-2k22-install
 echo "Started VM, waiting for VM to start"
 sleep 5
 
-vm_ready=$(oc get vm windows-install -o jsonpath='{.status.ready}')
+vm_ready=$(oc get vm windows-2k22-install -o jsonpath='{.status.ready}')
 while [ "$vm_ready" != "true" ]
 do
     sleep 10
-    vm_ready=$(oc get vm windows-install -o jsonpath='{.status.ready}')
+    vm_ready=$(oc get vm windows-2k22-install -o jsonpath='{.status.ready}')
 done
 
 echo "VM is started. Waiting for VMI to finish successfully."
-vmi_phase=$(oc get vmi windows-install -o jsonpath='{.status.phase}')
+vmi_phase=$(oc get vmi windows-2k22-install -o jsonpath='{.status.phase}')
 while [ "$vmi_phase" != "Succeeded" ]
 do
     sleep 30
-    vmi_phase=$(oc get vmi windows-install -o jsonpath='{.status.phase}')
+    vmi_phase=$(oc get vmi windows-2k22-install -o jsonpath='{.status.phase}')
     if [ "$vmi_phase" == "" ]; then
         vmi_phase="Succeeded"
     fi
@@ -49,6 +49,6 @@ done
 echo "Cleaning up"
 oc delete -f windows-install-vm.yaml
 
-my_app_name=$(oc get cm windows-install-scripts -o jsonpath='{.metadata.labels.app\.kubernetes\.io/instance}')
+my_app_name=$(oc get cm windows-2k22-install-scripts -o jsonpath='{.metadata.labels.app\.kubernetes\.io/instance}')
 
 echo "Finished"

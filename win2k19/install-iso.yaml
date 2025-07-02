@@ -12,9 +12,9 @@ spec:
     - ReadWriteMany
     resources:
       requests:
-        storage: 12Gi
+        storage: 20Gi
     volumeMode: Block
   source:
     http:
-      url: http://httpd.revoweb.com/isos/windows/server-2019.iso
+      url: http://192.168.20.14/isos/windows/server-2019.iso
 

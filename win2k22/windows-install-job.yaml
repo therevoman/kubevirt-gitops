@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: windows-install
+  name: windows-2k22-install
   namespace: kubevirt-gitops
   annotations:
     argocd.argoproj.io/hook: PostSync
@@ -9,7 +9,7 @@ spec:
   ttlSecondsAfterFinished: 600
   template:
     spec:
-      serviceAccountName: windows-install
+      serviceAccountName: windows-2k22-install
       restartPolicy: Never
       containers:
       - name: ose-cli
@@ -22,5 +22,5 @@ spec:
       volumes:
       - name: windows-install-scripts
         configMap:
-          name: windows-install-scripts
+          name: windows-2k22-install-scripts
 

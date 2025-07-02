@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: windows-install
+  name: windows-2k22-install
   namespace: openshift-gitops
 spec:
   destination:
