@@ -11,7 +11,7 @@ spec:
   source:
     path: win2k22
     repoURL: https://github.com/therevoman/kubevirt-gitops.git
-    targetRevision: HEAD
+    targetRevision: ocs
   syncPolicy:
     syncOptions:
     - CreateNamespace=false
