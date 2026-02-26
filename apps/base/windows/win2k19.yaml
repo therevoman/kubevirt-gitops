@@ -1,8 +1,9 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: windows-install
-  namespace: openshift-gitops
+  name: win2k19
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   destination:
     namespace: ""
@@ -11,7 +12,7 @@ spec:
   source:
     path: win2k19
     repoURL: https://github.com/therevoman/kubevirt-gitops.git
-    targetRevision: bm
+    targetRevision: HEAD
   syncPolicy:
     syncOptions:
     - CreateNamespace=false

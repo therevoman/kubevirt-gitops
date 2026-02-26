@@ -10,13 +10,11 @@ Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 $CertName = "balloon.cer"
 $ExportCert = Join-Path $BasePath -ChildPath $CertName
 
-#$Cert = (Get-AuthenticodeSignature "D:\Balloon\2k19\amd64\balloon.sys").SignerCertificate
-#$ExportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert
-$Cert = (Get-AuthenticodeSignature "E:\Balloon\2k19\amd64\balloon.sys").SignerCertificate
+$Cert = (Get-AuthenticodeSignature "D:\Balloon\2k19\amd64\balloon.sys").SignerCertificate
 $ExportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert
 
 [System.IO.File]::WriteAllBytes($ExportCert, $Cert.Export($ExportType))
-Import-Certificate -FilePath $ExportCert -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+Import-Certificate -FilePath $ExportCert -CertStoreLocation Cert:\LocalMachine\Trust
 
 # install Guest Agent
 msiexec /i e:\virtio-win-gt-x64.msi /qn /passive
@@ -27,13 +25,27 @@ msiexec /i e:\guest-agent\qemu-ga-x86_64.msi /qn /passive
 # Fix Guest Agent
 Start-Process  E:\vioserial\2k19\amd64\vioser.inf -Verb install
 
-# Get Cloud-init
-Set-ExecutionPolicy Unrestricted
-$Cloudinit = "CloudbaseInitSetup_Stable_x64.msi"
-$CloutinitLocaion =  Join-Path -Path "C:\windows\temp\" -ChildPath $Cloudinit
-invoke-webrequest https://www.cloudbase.it/downloads/$Cloudinit -o $CloutinitLocaion
+# Enable SSH
+Add-WindowsCapability -Online -Name 'OpenSSH.Server~~~~0.0.1.0'
+Set-Service -Name sshd -StartupType 'Automatic'
 
-cmd /C start /wait msiexec /i $CloutinitLocaion /qn
+# Enable Networking
+
+Enable-NetAdapter -Name "Ethernet" -Confirm:$false
+
+# Get Cloud-init
+#Set-ExecutionPolicy Unrestricted
+#$Cloudinit = "CloudbaseInitSetup_Stable_x64.msi"
+#$CloudinitLocation =  Join-Path -Path $BasePath -ChildPath $Cloudinit
+#invoke-webrequest https://cloudbase.it/downloads/$Cloudinit -o $CloudinitLocation
+
+#cmd /C start /wait msiexec /i $CloudinitLocation /qn
+
+# Copy cloud-init configurations in from configmap
+
+$CloudinitConfDir = "C:\Program Files\Cloudbase Solutions\Cloudbase-Init/conf"
+
+Copy-Item -Path 'F:\cloud*.conf' -Destination $CloudinitConfDir\
 
 # Cleanup
 Remove-item $BasePath -Recurse
@@ -42,9 +54,6 @@ Remove-item $BasePath -Recurse
 # reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v AutoAdminLogon /t REG_SZ /d 0 /f
 
 # Run Sysprep and Shutdown
-#
-#Push-Location "C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\"
-#C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown /unattend:Unattend.xml
 
 cmd /C 'cd "C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\" && C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown /unattend:Unattend.xml'
 

@@ -1,17 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: windows-install
-  namespace: openshift-gitops
+  name: kubevirt
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   destination:
-    namespace: ""
+    namespace: kubevirt
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: win2k19
+    path: kubevirt
     repoURL: https://github.com/therevoman/kubevirt-gitops.git
-    targetRevision: bm
+    targetRevision: HEAD
   syncPolicy:
+    automated: {}
     syncOptions:
-    - CreateNamespace=false
+    - CreateNamespace=true

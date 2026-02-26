@@ -1,0 +1,21 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  annotations:
+    cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+    kubevirt.ui/provider: fedora
+    cdi.kubevirt.io/storage.usePopulator: "true"
+    cdi.kubevirt.io/allowClaimAdoption: "true"
+    cdi.kubevirt.io/cloneType: snapshot
+  name: fedora
+spec:
+  storage:
+    resources:
+      requests:
+        storage: 20Gi
+  source:
+    http:
+      url: https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-AmazonEC2-41-1.4.x86_64.raw.xz
+#      https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
+#      https://mirror.arizona.edu/fedora/linux/releases/34/Cloud/x86_64/images/Fedora-Cloud-Base-34-1.2.x86_64.raw.xz
+
