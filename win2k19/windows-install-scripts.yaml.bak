@@ -106,27 +106,6 @@ data:
     \           <TimeZone>Mountain Standard Time</TimeZone>\r\n        </component>\r\n
     \   </settings>\r\n    <cpi:offlineImage cpi:source=\"\" xmlns:cpi=\"urn:schemas-microsoft-com:cpi\"
     />\r\n</unattend>\r\n"
-  clone-boot-source-old.yaml: |
-    apiVersion: cdi.kubevirt.io/v1beta1
-    kind: DataVolume
-    metadata:
-      name: win2k19-old
-      namespace: openshift-virtualization-os-images
-      annotations:
-        cdi.kubevirt.io/storage.bind.immediate.requested: "true"
-        kubevirt.ui/provider: Microsoft
-    spec:
-      source:
-        pvc:
-          namespace: openshift-virtualization-os-images
-          name: win2k19-old
-      pvc:
-        accessModes:
-        - ReadWriteMany
-        volumeMode: Block
-        resources:
-          requests:
-            storage: 60Gi
   clone-boot-source.yaml: |
     apiVersion: cdi.kubevirt.io/v1beta1
     kind: DataVolume
@@ -155,36 +134,14 @@ data:
     cd /scripts
 
     # https://hyperconverged-cluster-cli-download-openshift-cnv.apps.ocs.openshift.works/amd64/linux/virtctl.tar.gz
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
     wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz -O /tmp/virtctl.tar.gz
     tar -xzvf /tmp/virtctl.tar.gz -C /tmp/
-=======
-    wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local/amd64/linux/virtctl.tar.gz
-=======
-    wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz
->>>>>>> 2732ba5 (install script needs to reference service port 8080)
-    tar -xzvf virtctl.tar.gz
->>>>>>> e8555e1 (Updating scipts to work properly on 4.17+ and also shutdown VM when its completed.  Runstrategy=Manual)
-=======
-    wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz -O /tmp/virtctl.tar.gz
-    tar -xzvf /tmp/virtctl.tar.gz -C /tmp/
->>>>>>> cc1387e (need to manage virtctl in /tmp)
 
     oc apply -f windows-install-vm.yaml
     echo "Applied VM"
     sleep 5
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     /tmp/virtctl start windows-install
-=======
-    virtctl start windows-install
->>>>>>> e8555e1 (Updating scipts to work properly on 4.17+ and also shutdown VM when its completed.  Runstrategy=Manual)
-=======
-    /tmp/virtctl start windows-install
->>>>>>> cc1387e (need to manage virtctl in /tmp)
     echo "Started VM, waiting for VM to start"
     sleep 5
 
@@ -238,15 +195,7 @@ data:
     $CertName = "balloon.cer"
     $ExportCert = Join-Path $BasePath -ChildPath $CertName
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     $Cert = (Get-AuthenticodeSignature "E:\Balloon\2k19\amd64\balloon.sys").SignerCertificate
-=======
-    $Cert = (Get-AuthenticodeSignature "D:\Balloon\2k19\amd64\balloon.sys").SignerCertificate
->>>>>>> e8555e1 (Updating scipts to work properly on 4.17+ and also shutdown VM when its completed.  Runstrategy=Manual)
-=======
-    $Cert = (Get-AuthenticodeSignature "E:\Balloon\2k19\amd64\balloon.sys").SignerCertificate
->>>>>>> 64e930f (Checking in merge and changes for branch.  need to create a patch for Applicaion CR's to target this specific branch)
     $ExportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert
 
     [System.IO.File]::WriteAllBytes($ExportCert, $Cert.Export($ExportType))
@@ -300,7 +249,7 @@ data:
     delay\n            rtc:\n              tickPolicy: catchup\n          utc: {}\n
     \       cpu:\n          cores: 1\n          sockets: 2\n          threads: 1\n
     \       devices:\n          disks:\n          - name: windows-install-rootdisk\n
-    \           disk:\n              bus: virtio\n          - name: win2k19-install-iso\n
+    \           disk:\n              bus: sata\n          - name: win2k19-install-iso\n
     \           bootOrder: 1\n            cdrom:\n              bus: sata\n          -
     name: windows-guest-tools\n            cdrom:\n              bus: sata\n          -
     name: windows-install-scripts\n            cdrom:\n              bus: sata\n          inputs:\n

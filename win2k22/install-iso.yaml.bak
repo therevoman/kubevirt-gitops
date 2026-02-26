@@ -1,0 +1,20 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  annotations:
+    cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+    kubevirt.ui/provider: Microsoft
+  name: win2k22-install-iso
+  namespace: kubevirt-gitops
+spec:
+  pvc:
+    accessModes:
+    - ReadWriteMany
+    resources:
+      requests:
+        storage: 12Gi
+    volumeMode: Block
+  source:
+    http:
+      url: http://httpd.revoweb.com/isos/windows/server-2022.iso
+

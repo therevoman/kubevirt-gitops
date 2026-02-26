@@ -1,0 +1,95 @@
+apiVersion: pool.kubevirt.io/v1alpha1
+kind: VirtualMachinePool
+metadata:
+  name: vm-pool-fedora
+  namespace: pool-of-fedoras
+spec:
+  nameGeneration:
+    appendIndexToSecretRefs: true
+    appendIndexToConfigMapRefs: true
+  replicas: 2
+  selector:
+    matchLabels:
+      kubevirt.io/vmpool: vm-pool-fedora
+  virtualMachineTemplate:
+    metadata:
+      creationTimestamp: null
+      labels:
+        kubevirt.io/vmpool: vm-pool-fedora
+    spec:
+      runStrategy: Always
+      dataVolumeTemplates:
+      - apiVersion: cdi.kubevirt.io/v1beta1
+        kind: DataVolume
+        metadata:
+          name: fedoradatavolume
+        spec:
+          sourceRef:
+            kind: DataSource
+            name: fedora
+            namespace: 'openshift-virtualization-os-images'
+          storage:
+            resources:
+              requests:
+                storage: 30Gi
+      template:
+        metadata:
+          annotations:
+            descheduler.alpha.kubernetes.io/evict: 'true'
+            vm.kubevirt.io/flavor: small
+            vm.kubevirt.io/os: fedora
+            vm.kubevirt.io/workload: server
+          creationTimestamp: null
+          labels:
+            kubevirt.io/vmpool: vm-pool-fedora
+        spec:
+          architecture: amd64
+          domain:
+            cpu:
+              cores: 1
+              sockets: 1
+              threads: 1
+            devices:
+              disks:
+                - disk:
+                    bus: virtio
+                  name: rootdisk
+                - disk:
+                    bus: virtio
+                  name: cloudinitdisk
+              interfaces:
+                - masquerade: {}
+                  model: virtio
+                  name: default
+#                - bridge: {}
+#                  model: virtio
+#                  name: untrusted
+              rng: {}
+            features:
+              smm:
+                enabled: true
+            firmware:
+              bootloader:
+                efi: {}
+            memory:
+              guest: 2Gi
+          networks:
+            - name: default
+              pod: {}
+#            - multus:
+#                networkName: default/vlan-29-untrusted
+#              name: untrusted
+          terminationGracePeriodSeconds: 0
+          volumes:
+            - dataVolume:
+                name: fedoradatavolume
+              name: rootdisk
+            - name: cloudinitdisk
+              cloudInitNoCloud:
+                secretRef:
+                  name: fedora-cloudinit  # Use the same secret for all VMs in the pool
+#                userDataSource:
+#                  source:
+#                    secretRef:
+#                      name: fedora-cloudinit # Will become my-cloudinit-0, my-cloudinit-1, etc.
+#                      namespace: pool-of-fedoras

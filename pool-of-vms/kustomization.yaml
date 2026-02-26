@@ -1,0 +1,5 @@
+namespace: pool-of-vms
+
+resources:
+  - namespace.yaml
+  - virtualmachinepool.yaml

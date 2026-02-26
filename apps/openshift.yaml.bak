@@ -2,16 +2,16 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: kubevirt-gitops
-  namespace: argocd
+  namespace: openshift-gitops
 spec:
   destination:
-    namespace: argocd
+    namespace: openshift-gitops
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: apps/overlays/kubernetes
-    repoURL: https://github.com/cwilkers/kubevirt-gitops.git
-    targetRevision: ocs
+    path: datavolumes
+    repoURL: https://github.com/therevoman/kubevirt-gitops.git
+    targetRevision: HEAD
   syncPolicy:
     automated: {}
     syncOptions:
