@@ -1,4 +1,4 @@
-apiVersion: argoproj.io/v1alpha1
+apiVersion: argoproj.io/v1beta1
 kind: Application
 metadata:
   name: kubevirt
@@ -10,8 +10,8 @@ spec:
   project: default
   source:
     path: kubevirt
-    repoURL: https://github.com/cwilkers/kubevirt-gitops
-    targetRevision: HEAD
+    repoURL: https://github.com/therevoman/kubevirt-gitops
+    targetRevision: ocs-old
   syncPolicy:
     automated: {}
     syncOptions:
