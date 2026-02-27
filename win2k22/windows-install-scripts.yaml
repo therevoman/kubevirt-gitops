@@ -82,7 +82,7 @@ data:
     \   </component>\r\n    <component name=\"Microsoft-Windows-Shell-Setup\" processorArchitecture=\"amd64\"
     publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\r\n
     \     <FirstLogonCommands>\r\n        <SynchronousCommand wcm:action=\"add\">\r\n
-    \         <CommandLine>powershell -ExecutionPolicy Bypass -File -noexit f:\\post-install.ps1</CommandLine>\r\n
+    \         <CommandLine>powershell -ExecutionPolicy Bypass -File -noexit E:\\post-install.ps1</CommandLine>\r\n
     \         <RequiresUserInput>false</RequiresUserInput>\r\n          <Order>1</Order>\r\n
     \         <Description>Post Installation Script</Description>\r\n        </SynchronousCommand>\r\n
     \     </FirstLogonCommands>\r\n      <OOBE>\r\n        <HideEULAPage>true</HideEULAPage>\r\n
