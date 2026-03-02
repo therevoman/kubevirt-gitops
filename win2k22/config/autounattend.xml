@@ -1,49 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-<unattend xsi:schemaLocation="urn:schemas-microsoft-com:unattend" xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<unattend xmlns="urn:schemas-microsoft-com:unattend"
+          xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="urn:schemas-microsoft-com:unattend">
+
+  <!-- windowsPE: language, disk layout, image selection, drivers -->
   <settings pass="windowsPE">
-        <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-            <SetupUILanguage>
-                <UILanguage>en-US</UILanguage>
-            </SetupUILanguage>
-            <InputLocale>en-US</InputLocale>
-            <SystemLocale>en-US</SystemLocale>
-            <UILanguage>en-US</UILanguage>
-            <UILanguageFallback>en-US</UILanguageFallback>
-            <UserLocale>en-US</UserLocale>
-        </component>
-    <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+    <component name="Microsoft-Windows-International-Core-WinPE"
+               processorArchitecture="amd64"
+               publicKeyToken="31bf3856ad364e35"
+               language="neutral"
+               versionScope="nonSxS">
+      <SetupUILanguage>
+        <UILanguage>en-US</UILanguage>
+      </SetupUILanguage>
+      <InputLocale>en-US</InputLocale>
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>en-US</UILanguage>
+      <UILanguageFallback>en-US</UILanguageFallback>
+      <UserLocale>en-US</UserLocale>
+    </component>
+
+    <component name="Microsoft-Windows-Setup"
+               processorArchitecture="amd64"
+               publicKeyToken="31bf3856ad364e35"
+               language="neutral"
+               versionScope="nonSxS">
       <DiskConfiguration>
         <Disk wcm:action="add">
           <DiskID>0</DiskID>
           <WillWipeDisk>true</WillWipeDisk>
           <CreatePartitions>
-                        <!-- Windows RE Tools partition -->
+            <!-- Windows RE Tools partition -->
             <CreatePartition wcm:action="add">
               <Order>1</Order>
               <Type>Primary</Type>
               <Size>500</Size>
             </CreatePartition>
-                        <!-- System partition (ESP) -->
+            <!-- System partition (ESP) -->
             <CreatePartition wcm:action="add">
               <Order>2</Order>
               <Type>EFI</Type>
               <Size>1024</Size>
             </CreatePartition>
-                        <!-- Microsoft reserved partition (MSR) -->
+            <!-- Microsoft reserved partition (MSR) -->
             <CreatePartition wcm:action="add">
               <Order>3</Order>
               <Type>MSR</Type>
               <Size>128</Size>
             </CreatePartition>
-                        <!-- Windows partition -->
+            <!-- Windows partition -->
             <CreatePartition wcm:action="add">
               <Order>4</Order>
               <Type>Primary</Type>
               <Extend>true</Extend>
             </CreatePartition>
           </CreatePartitions>
+
           <ModifyPartitions>
-                        <!-- Windows RE Tools partition -->
+            <!-- Windows RE Tools partition -->
             <ModifyPartition wcm:action="add">
               <Order>1</Order>
               <PartitionID>1</PartitionID>
@@ -51,19 +66,19 @@
               <Format>NTFS</Format>
               <TypeID>DE94BBA4-06D1-4D40-A16A-BFD50179D6AC</TypeID>
             </ModifyPartition>
-                        <!-- System partition (ESP) -->
+            <!-- System partition (ESP) -->
             <ModifyPartition wcm:action="add">
               <Order>2</Order>
               <PartitionID>2</PartitionID>
               <Label>System</Label>
               <Format>FAT32</Format>
             </ModifyPartition>
-                        <!-- MSR partition does not need to be modified -->
+            <!-- MSR partition does not need to be modified -->
             <ModifyPartition wcm:action="add">
               <Order>3</Order>
               <PartitionID>3</PartitionID>
             </ModifyPartition>
-                        <!-- Windows partition -->
+            <!-- Windows partition -->
             <ModifyPartition wcm:action="add">
               <Order>4</Order>
               <PartitionID>4</PartitionID>
@@ -74,6 +89,7 @@
           </ModifyPartitions>
         </Disk>
       </DiskConfiguration>
+
       <ImageInstall>
         <OSImage>
           <InstallFrom>
@@ -88,23 +104,21 @@
           </InstallTo>
         </OSImage>
       </ImageInstall>
+
       <UserData>
         <AcceptEula>true</AcceptEula>
         <FullName>Administrator</FullName>
         <Organization>My Organization</Organization>
       </UserData>
+
       <EnableFirewall>false</EnableFirewall>
     </component>
-    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-      <SetupUILanguage>
-        <UILanguage>en-US</UILanguage>
-      </SetupUILanguage>
-      <InputLocale>en-US</InputLocale>
-      <SystemLocale>en-US</SystemLocale>
-      <UILanguage>en-US</UILanguage>
-      <UserLocale>en-US</UserLocale>
-    </component>
-    <component name="Microsoft-Windows-PnpCustomizationsWinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+
+    <component name="Microsoft-Windows-PnpCustomizationsWinPE"
+               processorArchitecture="amd64"
+               publicKeyToken="31bf3856ad364e35"
+               language="neutral"
+               versionScope="nonSxS">
       <DriverPaths>
         <PathAndCredentials wcm:keyValue="4b29ba63" wcm:action="add">
           <Path>E:\amd64\2k22</Path>
@@ -115,17 +129,30 @@
       </DriverPaths>
     </component>
   </settings>
+
+  <!-- offlineServicing: UAC -->
   <settings pass="offlineServicing">
-    <component name="Microsoft-Windows-LUA-Settings" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+    <component name="Microsoft-Windows-LUA-Settings"
+               processorArchitecture="amd64"
+               publicKeyToken="31bf3856ad364e35"
+               language="neutral"
+               versionScope="nonSxS">
       <EnableLUA>false</EnableLUA>
     </component>
   </settings>
+
+  <!-- specialize: computer name, timezone, autologon, admin account -->
   <settings pass="specialize">
-    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-            <OEMInformation>
-                <HelpCustomized>false</HelpCustomized>
-            </OEMInformation>
-            <ComputerName>*</ComputerName>
+    <component name="Microsoft-Windows-Shell-Setup"
+               processorArchitecture="amd64"
+               publicKeyToken="31bf3856ad364e35"
+               language="neutral"
+               versionScope="nonSxS">
+      <OEMInformation>
+        <HelpCustomized>false</HelpCustomized>
+      </OEMInformation>
+      <ComputerName>*</ComputerName>
+
       <AutoLogon>
         <Password>
           <Value>R3dh4t1!</Value>
@@ -135,6 +162,17 @@
         <LogonCount>999</LogonCount>
         <Username>Administrator</Username>
       </AutoLogon>
+
+      <OOBE>
+        <HideEULAPage>true</HideEULAPage>
+        <HideLocalAccountScreen>true</HideLocalAccountScreen>
+        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+        <NetworkLocation>Work</NetworkLocation>
+        <ProtectYourPC>3</ProtectYourPC>
+        <SkipMachineOOBE>true</SkipMachineOOBE>
+      </OOBE>
+
       <UserAccounts>
         <LocalAccounts>
           <LocalAccount wcm:action="add">
@@ -145,17 +183,39 @@
           </LocalAccount>
         </LocalAccounts>
       </UserAccounts>
+
       <TimeZone>Mountain Standard Time</TimeZone>
     </component>
   </settings>
+
+  <!-- oobeSystem: locales, autologon, first-logon script -->
   <settings pass="oobeSystem">
-    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+    <component name="Microsoft-Windows-International-Core"
+               processorArchitecture="amd64"
+               publicKeyToken="31bf3856ad364e35"
+               language="neutral"
+               versionScope="nonSxS">
       <InputLocale>en-US</InputLocale>
       <SystemLocale>en-US</SystemLocale>
       <UILanguage>en-US</UILanguage>
       <UserLocale>en-US</UserLocale>
     </component>
-    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+
+    <component name="Microsoft-Windows-Shell-Setup"
+               processorArchitecture="amd64"
+               publicKeyToken="31bf3856ad364e35"
+               language="neutral"
+               versionScope="nonSxS">
+      <AutoLogon>
+        <Password>
+          <Value>R3dh4t1!</Value>
+          <PlainText>true</PlainText>
+        </Password>
+        <Enabled>true</Enabled>
+        <LogonCount>999</LogonCount>
+        <Username>Administrator</Username>
+      </AutoLogon>
+
       <FirstLogonCommands>
         <SynchronousCommand wcm:action="add">
           <CommandLine>powershell -ExecutionPolicy Bypass -File -noexit E:\post-install.ps1</CommandLine>
@@ -164,6 +224,7 @@
           <Description>Post Installation Script</Description>
         </SynchronousCommand>
       </FirstLogonCommands>
+
       <OOBE>
         <HideEULAPage>true</HideEULAPage>
         <HideLocalAccountScreen>true</HideLocalAccountScreen>
@@ -173,7 +234,22 @@
         <ProtectYourPC>3</ProtectYourPC>
         <SkipMachineOOBE>true</SkipMachineOOBE>
       </OOBE>
+
+      <UserAccounts>
+        <LocalAccounts>
+          <LocalAccount wcm:action="add">
+            <Description>Local Administrator Account</Description>
+            <DisplayName>Administrator</DisplayName>
+            <Group>Administrators</Group>
+            <Name>Administrator</Name>
+          </LocalAccount>
+        </LocalAccounts>
+      </UserAccounts>
+
+      <TimeZone>Mountain Standard Time</TimeZone>
     </component>
   </settings>
-  <cpi:offlineImage cpi:source="" xmlns:cpi="urn:schemas-microsoft-com:cpi" />
+
+  <cpi:offlineImage xmlns:cpi="urn:schemas-microsoft-com:cpi"
+                    cpi:source="" />
 </unattend>
