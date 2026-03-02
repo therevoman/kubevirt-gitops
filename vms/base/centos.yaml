@@ -86,7 +86,7 @@ items:
             userData: |-
               #cloud-config
               user: fedora
-              password: 6udd-rad7-qpyd
+              password: 6udd-rad7-qpyd # notsecret
               chpasswd: { expire: False }
           name: cloudinitdisk
 kind: List
