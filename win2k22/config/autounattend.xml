@@ -206,16 +206,6 @@
                publicKeyToken="31bf3856ad364e35"
                language="neutral"
                versionScope="nonSxS">
-      <AutoLogon>
-        <Password>
-          <Value>R3dh4t1!</Value>
-          <PlainText>true</PlainText>
-        </Password>
-        <Enabled>true</Enabled>
-        <LogonCount>999</LogonCount>
-        <Username>Administrator</Username>
-      </AutoLogon>
-
       <FirstLogonCommands>
         <SynchronousCommand wcm:action="add">
           <CommandLine>powershell -ExecutionPolicy Bypass -File -noexit E:\post-install.ps1</CommandLine>
@@ -235,18 +225,6 @@
         <SkipMachineOOBE>true</SkipMachineOOBE>
       </OOBE>
 
-      <UserAccounts>
-        <LocalAccounts>
-          <LocalAccount wcm:action="add">
-            <Description>Local Administrator Account</Description>
-            <DisplayName>Administrator</DisplayName>
-            <Group>Administrators</Group>
-            <Name>Administrator</Name>
-          </LocalAccount>
-        </LocalAccounts>
-      </UserAccounts>
-
-      <TimeZone>Mountain Standard Time</TimeZone>
     </component>
   </settings>
 
