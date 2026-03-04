@@ -15,12 +15,12 @@ spec:
       - name: ose-cli
         image: registry.redhat.io/openshift4/ose-cli-rhel9:latest
         volumeMounts:
-        - name: windows-install-scripts
+        - name: windows-2k22-install-scripts
           mountPath: /scripts
         command: ["/bin/sh"]
         args: ["/scripts/install.sh"]
       volumes:
-      - name: windows-install-scripts
+      - name: windows-2k22-install-scripts
         configMap:
           name: windows-2k22-install-scripts
 

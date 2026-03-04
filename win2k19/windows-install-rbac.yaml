@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: windows-install-cadmin
+  name: windows-2k19-install-cadmin
   namespace: kubevirt-gitops
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -10,13 +10,13 @@ roleRef:
   name: cluster-admin
 subjects:
 - kind: ServiceAccount
-  name: windows-install
+  name: windows-2k19-install
   namespace: kubevirt-gitops
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: windows-install-image-edit
+  name: windows-2k19-install-image-edit
   namespace: openshift-virtualization-os-images
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -24,5 +24,5 @@ roleRef:
   name: os-images.kubevirt.io:edit
 subjects:
 - kind: ServiceAccount
-  name: windows-install
+  name: windows-2k19-install
   namespace: kubevirt-gitops
