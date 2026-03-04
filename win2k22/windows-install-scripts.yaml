@@ -1,8 +1,7 @@
 apiVersion: v1
 data:
   autounattend.xml: "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<unattend xmlns=\"urn:schemas-microsoft-com:unattend\"\r\n
-    \         xmlns:wcm=\"http://schemas.microsoft.com/WMIConfig/2002/State\"\r\n
-    \         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\r\n          xsi:schemaLocation=\"urn:schemas-microsoft-com:unattend\">\r\n\r\n
+    \         xmlns:wcm=\"http://schemas.microsoft.com/WMIConfig/2002/State\">\r\n\r\n
     \ <!-- windowsPE: language, disk layout, image selection, drivers -->\r\n  <settings
     pass=\"windowsPE\">\r\n    <component name=\"Microsoft-Windows-International-Core-WinPE\"\r\n
     \              processorArchitecture=\"amd64\"\r\n               publicKeyToken=\"31bf3856ad364e35\"\r\n
@@ -212,10 +211,10 @@ data:
     # Get Cloud-init
     Set-ExecutionPolicy Unrestricted
     $Cloudinit = "CloudbaseInitSetup_Stable_x64.msi"
-    $CloutinitLocaion =  Join-Path -Path "C:\windows\temp\" -ChildPath $Cloudinit
-    invoke-webrequest https://www.cloudbase.it/downloads/$Cloudinit -o $CloutinitLocaion
+    $CloudinitLocation =  Join-Path -Path "C:\windows\temp\" -ChildPath $Cloudinit
+    invoke-webrequest https://www.cloudbase.it/downloads/$Cloudinit -o $CloudinitLocation
 
-    cmd /C start /wait msiexec /i $CloutinitLocaion /qn
+    cmd /C start /wait msiexec /i $CloudinitLocation /qn
 
     # Cleanup
     Remove-item $BasePath -Recurse
@@ -228,12 +227,12 @@ data:
     #Push-Location "C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\"
     #C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown /unattend:Unattend.xml
 
-    cmd /C 'cd "C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\" && C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown /unattend:Unattend.xml'
-
     # Perform windows updates
     Install-Module PSWindowsUpdate -Force -AcceptLicense -Confirm
     Get-WindowsUpdate
     Install-WindowsUpdate -AcceptAll -AutoReboot
+
+    cmd /C 'cd "C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\" && C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown /unattend:Unattend.xml'
 
     Start-Sleep -Duration (New-TimeSpan -Seconds 600); Stop-Computer
   windows-2k22-install-vm.yaml: "apiVersion: kubevirt.io/v1\nkind: VirtualMachine\nmetadata:\n

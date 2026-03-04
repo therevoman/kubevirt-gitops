@@ -28,10 +28,10 @@ Start-Process  E:\vioserial\2k19\amd64\vioser.inf -Verb install
 # Get Cloud-init
 Set-ExecutionPolicy Unrestricted
 $Cloudinit = "CloudbaseInitSetup_Stable_x64.msi"
-$CloutinitLocaion =  Join-Path -Path "C:\windows\temp\" -ChildPath $Cloudinit
-invoke-webrequest https://www.cloudbase.it/downloads/$Cloudinit -o $CloutinitLocaion
+$CloudinitLocation =  Join-Path -Path "C:\windows\temp\" -ChildPath $Cloudinit
+invoke-webrequest https://www.cloudbase.it/downloads/$Cloudinit -o $CloudinitLocation
 
-cmd /C start /wait msiexec /i $CloutinitLocaion /qn
+cmd /C start /wait msiexec /i $CloudinitLocation /qn
 
 # Cleanup
 Remove-item $BasePath -Recurse
@@ -44,11 +44,11 @@ Remove-item $BasePath -Recurse
 #Push-Location "C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\"
 #C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown /unattend:Unattend.xml
 
-cmd /C 'cd "C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\" && C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown /unattend:Unattend.xml'
-
 # Perform windows updates
 Install-Module PSWindowsUpdate -Force -AcceptLicense -Confirm
 Get-WindowsUpdate
 Install-WindowsUpdate -AcceptAll -AutoReboot
+
+cmd /C 'cd "C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\" && C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown /unattend:Unattend.xml'
 
 Start-Sleep -Duration (New-TimeSpan -Seconds 600); Stop-Computer
