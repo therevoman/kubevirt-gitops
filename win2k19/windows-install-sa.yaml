@@ -2,5 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
-  name: windows-install
+  name: windows-2k19-install
   namespace: kubevirt-gitops
+  labels:
+    app.kubernetes.io/instance: windows-2k19-install

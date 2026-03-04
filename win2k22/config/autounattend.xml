@@ -95,7 +95,7 @@
           <InstallFrom>
             <MetaData wcm:action="add">
               <Key>/IMAGE/NAME</Key>
-              <Value>Windows Server 2022 Datacenter Evaluation (Desktop Experience)</Value>
+              <Value>Windows Server 2022 Standard Evaluation (Desktop Experience)</Value>
             </MetaData>
           </InstallFrom>
           <InstallTo>
@@ -217,7 +217,7 @@
               </AutoLogon>
               <FirstLogonCommands>
         <SynchronousCommand wcm:action="add">
-          <CommandLine>powershell -ExecutionPolicy Bypass -File -noexit E:\post-install.ps1</CommandLine>
+          <CommandLine>powershell -ExecutionPolicy Bypass -File -noexit F:\post-install.ps1</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
           <Order>1</Order>
           <Description>Post Installation Script</Description>

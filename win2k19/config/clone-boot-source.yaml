@@ -10,7 +10,7 @@ spec:
   source:
     pvc:
       namespace: kubevirt-gitops
-      name: windows-install-rootdisk
+      name: windows-2k19-install-rootdisk
   pvc:
     accessModes:
     - ReadWriteMany

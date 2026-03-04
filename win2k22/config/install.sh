@@ -7,7 +7,7 @@ cd /scripts
 wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz -O /tmp/virtctl.tar.gz
 tar -xzvf /tmp/virtctl.tar.gz -C /tmp/
 
-oc apply -f windows-install-vm.yaml
+oc apply -f windows-2k22-install-vm.yaml
 echo "Applied VM"
 sleep 5
 
@@ -47,7 +47,7 @@ do
 done
 
 echo "Cleaning up"
-oc delete -f windows-install-vm.yaml
+oc delete -f windows-2k22-install-vm.yaml
 
 my_app_name=$(oc get cm windows-2k22-install-scripts -o jsonpath='{.metadata.labels.app\.kubernetes\.io/instance}')
 
