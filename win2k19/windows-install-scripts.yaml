@@ -247,7 +247,7 @@ data:
     \     - name: windows-2k19-install-rootdisk \n        dataVolume:\n          name:
     windows-2k19-install-rootdisk\n      - name: win2k19-install-iso\n        persistentVolumeClaim:\n
     \         claimName: win2k19-install-iso\n      - name: windows-guest-tools\n
-    \       containerDisk:\n          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:latest\n
+    \       containerDisk:\n          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.20\n
     \     - name: windows-2k19-install-scripts\n        configMap:\n          name:
     windows-2k19-install-scripts\n  dataVolumeTemplates:\n  - metadata:\n      name:
     windows-2k19-install-rootdisk\n    spec:\n      pvc:\n        accessModes:\n        -
