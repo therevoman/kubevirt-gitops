@@ -42,7 +42,7 @@ data:
     \           </ModifyPartition>\r\n          </ModifyPartitions>\r\n        </Disk>\r\n
     \     </DiskConfiguration>\r\n\r\n      <ImageInstall>\r\n        <OSImage>\r\n
     \         <InstallFrom>\r\n            <MetaData wcm:action=\"add\">\r\n              <Key>/IMAGE/NAME</Key>\r\n
-    \             <Value>Windows Server 2022 Datacenter Evaluation (Desktop Experience)</Value>\r\n
+    \             <Value>Windows Server 2022 Standard Evaluation (Desktop Experience)</Value>\r\n
     \           </MetaData>\r\n          </InstallFrom>\r\n          <InstallTo>\r\n
     \           <DiskID>0</DiskID>\r\n            <PartitionID>4</PartitionID>\r\n
     \         </InstallTo>\r\n        </OSImage>\r\n      </ImageInstall>\r\n\r\n
@@ -91,7 +91,7 @@ data:
     \               </Password>\r\n                <Enabled>true</Enabled>\r\n                <LogonCount>999</LogonCount>\r\n
     \               <Username>Administrator</Username>\r\n              </AutoLogon>\r\n
     \             <FirstLogonCommands>\r\n        <SynchronousCommand wcm:action=\"add\">\r\n
-    \         <CommandLine>powershell -ExecutionPolicy Bypass -File -noexit E:\\post-install.ps1</CommandLine>\r\n
+    \         <CommandLine>powershell -ExecutionPolicy Bypass -File -noexit F:\\post-install.ps1</CommandLine>\r\n
     \         <RequiresUserInput>false</RequiresUserInput>\r\n          <Order>1</Order>\r\n
     \         <Description>Post Installation Script</Description>\r\n        </SynchronousCommand>\r\n
     \     </FirstLogonCommands>\r\n\r\n      <OOBE>\r\n        <HideEULAPage>true</HideEULAPage>\r\n
@@ -136,7 +136,7 @@ data:
     wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz -O /tmp/virtctl.tar.gz
     tar -xzvf /tmp/virtctl.tar.gz -C /tmp/
 
-    oc apply -f windows-install-vm.yaml
+    oc apply -f windows-2k22-install-vm.yaml
     echo "Applied VM"
     sleep 5
 
@@ -176,7 +176,7 @@ data:
     done
 
     echo "Cleaning up"
-    oc delete -f windows-install-vm.yaml
+    oc delete -f windows-2k22-install-vm.yaml
 
     my_app_name=$(oc get cm windows-2k22-install-scripts -o jsonpath='{.metadata.labels.app\.kubernetes\.io/instance}')
 
@@ -268,7 +268,7 @@ data:
     \     - name: windows-2k22-install-rootdisk \n        dataVolume:\n          name:
     windows-2k22-install-rootdisk\n      - name: win2k22-install-iso\n        persistentVolumeClaim:\n
     \         claimName: win2k22-install-iso\n      - name: windows-guest-tools\n
-    \       containerDisk:\n          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.18\n
+    \       containerDisk:\n          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:latest\n
     \     - name: windows-2k22-install-scripts\n        configMap:\n          name:
     windows-2k22-install-scripts\n  dataVolumeTemplates:\n  - metadata:\n      name:
     windows-2k22-install-rootdisk\n    spec:\n      pvc:\n        accessModes:\n        -

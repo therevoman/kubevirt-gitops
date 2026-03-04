@@ -96,7 +96,7 @@ data:
       source:
         pvc:
           namespace: kubevirt-gitops
-          name: windows-install-rootdisk
+          name: windows-2k19-install-rootdisk
       pvc:
         accessModes:
         - ReadWriteMany
@@ -114,27 +114,27 @@ data:
     wget http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz -O /tmp/virtctl.tar.gz
     tar -xzvf /tmp/virtctl.tar.gz -C /tmp/
 
-    oc apply -f windows-install-vm.yaml
+    oc apply -f windows-2k19-install-vm.yaml
     echo "Applied VM"
     sleep 5
 
-    /tmp/virtctl start windows-install
+    /tmp/virtctl start windows-2k19-install
     echo "Started VM, waiting for VM to start"
     sleep 5
 
-    vm_ready=$(oc get vm windows-install -o jsonpath='{.status.ready}')
+    vm_ready=$(oc get vm windows-2k19-install -o jsonpath='{.status.ready}')
     while [ "$vm_ready" != "true" ]
     do
         sleep 10
-        vm_ready=$(oc get vm windows-install -o jsonpath='{.status.ready}')
+        vm_ready=$(oc get vm windows-2k19-install -o jsonpath='{.status.ready}')
     done
 
     echo "VM is started. Waiting for VMI to finish successfully."
-    vmi_phase=$(oc get vmi windows-install -o jsonpath='{.status.phase}')
+    vmi_phase=$(oc get vmi windows-2k19-install -o jsonpath='{.status.phase}')
     while [ "$vmi_phase" != "Succeeded" ]
     do
         sleep 30
-        vmi_phase=$(oc get vmi windows-install -o jsonpath='{.status.phase}')
+        vmi_phase=$(oc get vmi windows-2k19-install -o jsonpath='{.status.phase}')
         if [ "$vmi_phase" == "" ]; then
             vmi_phase="Succeeded"
         fi
@@ -154,9 +154,9 @@ data:
     done
 
     echo "Cleaning up"
-    oc delete -f windows-install-vm.yaml
+    oc delete -f windows-2k19-install-vm.yaml
 
-    my_app_name=$(oc get cm windows-install-scripts -o jsonpath='{.metadata.labels.app\.kubernetes\.io/instance}')
+    my_app_name=$(oc get cm windows-2k19-install-scripts -o jsonpath='{.metadata.labels.app\.kubernetes\.io/instance}')
 
     echo "Finished"
   post-install.ps1: |
@@ -214,24 +214,24 @@ data:
     Install-WindowsUpdate -AcceptAll -AutoReboot
 
     Start-Sleep -Duration (New-TimeSpan -Seconds 600); Stop-Computer
-  windows-install-vm.yaml: "apiVersion: kubevirt.io/v1\nkind: VirtualMachine\nmetadata:\n
+  windows-2k19-install-vm.yaml: "apiVersion: kubevirt.io/v1\nkind: VirtualMachine\nmetadata:\n
     \ annotations:\n    name.os.template.kubevirt.io/win2k19: Microsoft Windows Server
-    2019\n    description: windows-install\n  labels:\n    app: windows-install\n
-    \ name: windows-install\nspec:\n  runStrategy: Manual\n  template:\n    metadata:\n
+    2019\n    description: windows-2k19-install\n  labels:\n    app: windows-2k19-install\n
+    \ name: windows-2k19-install\nspec:\n  runStrategy: Manual\n  template:\n    metadata:\n
     \     annotations:\n        vm.kubevirt.io/os: windows2k19\n        vm.kubevirt.io/workload:
-    server\n      labels:\n        kubevirt.io/domain: windows-install\n        vm.kubevirt.io/name:
-    windows-install\n        workload.template.kubevirt.io/server: 'true'\n    spec:\n
+    server\n      labels:\n        kubevirt.io/domain: windows-2k19-install\n        vm.kubevirt.io/name:
+    windows-2k19-install\n        workload.template.kubevirt.io/server: 'true'\n    spec:\n
     \     architecture: amd64\n      domain:\n        clock:\n          timer:\n            hpet:\n
     \             present: false\n            hyperv: {}\n            pit:\n              tickPolicy:
     delay\n            rtc:\n              tickPolicy: catchup\n          utc: {}\n
-    \       cpu:\n          cores: 1\n          sockets: 2\n          threads: 1\n
-    \       devices:\n          disks:\n          - name: windows-install-rootdisk\n
+    \       cpu:\n          cores: 1\n          sockets: 4\n          threads: 1\n
+    \       devices:\n          disks:\n          - name: windows-2k19-install-rootdisk\n
     \           disk:\n              bus: sata\n          - name: win2k19-install-iso\n
     \           bootOrder: 1\n            cdrom:\n              bus: sata\n          -
     name: windows-guest-tools\n            cdrom:\n              bus: sata\n          -
-    name: windows-install-scripts\n            cdrom:\n              bus: sata\n          inputs:\n
-    \           - bus: usb\n              name: tablet\n              type: tablet\n
-    \         interfaces:\n          - name: default\n            model: virtio\n
+    name: windows-2k19-install-scripts\n            cdrom:\n              bus: sata\n
+    \         inputs:\n            - bus: usb\n              name: tablet\n              type:
+    tablet\n          interfaces:\n          - name: default\n            model: virtio\n
     \           masquerade: {}\n          networkInterfaceMultiqueue: true\n          rng:
     {}\n          logSerialConsole: false\n        features:\n          acpi: {}\n
     \         apic: {}\n          hyperv:\n            reenlightenment: {}\n            ipi:
@@ -240,20 +240,20 @@ data:
     \           relaxed: {}\n            vpindex: {}\n            runtime: {}\n            tlbflush:
     {}\n            frequencies: {}\n            vapic: {}\n          smm: {}\n        firmware:\n
     \         bootloader:\n            efi:\n              secureBoot: true\n        machine:\n
-    \         type: pc-q35-rhel9.4.0\n        memory:\n          guest: 4Gi\n      evictionStrategy:
-    LiveMigrate\n      hostname: windows-install\n      networks:\n      - name: default\n
-    \       pod: {}\n      terminationGracePeriodSeconds: 180\n      volumes:\n      -
-    name: windows-install-rootdisk \n        dataVolume:\n          name: windows-install-rootdisk\n
-    \     - name: win2k19-install-iso\n        persistentVolumeClaim:\n          claimName:
-    win2k19-install-iso\n      - name: windows-guest-tools\n        containerDisk:\n
-    \         image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.17\n
-    \     - name: windows-install-scripts\n        configMap:\n          name: windows-install-scripts\n
-    \ dataVolumeTemplates:\n  - metadata:\n      name: windows-install-rootdisk\n
-    \   spec:\n      pvc:\n        accessModes:\n        - ReadWriteMany\n        volumeMode:
-    Block\n        resources:\n          requests:\n            storage: 60Gi\n      source:\n
-    \       blank: {}\n"
+    \         type: pc-q35-rhel9.4.0\n        memory:\n          guest: 8Gi\n      evictionStrategy:
+    LiveMigrate\n      hostname: windows-2k19-install\n      networks:\n      - name:
+    default\n        pod: {}\n      terminationGracePeriodSeconds: 180\n      volumes:\n
+    \     - name: windows-2k19-install-rootdisk \n        dataVolume:\n          name:
+    windows-2k19-install-rootdisk\n      - name: win2k19-install-iso\n        persistentVolumeClaim:\n
+    \         claimName: win2k19-install-iso\n      - name: windows-guest-tools\n
+    \       containerDisk:\n          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:latest\n
+    \     - name: windows-2k19-install-scripts\n        configMap:\n          name:
+    windows-2k19-install-scripts\n  dataVolumeTemplates:\n  - metadata:\n      name:
+    windows-2k19-install-rootdisk\n    spec:\n      pvc:\n        accessModes:\n        -
+    ReadWriteMany\n        volumeMode: Block\n        resources:\n          requests:\n
+    \           storage: 60Gi\n      source:\n        blank: {}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
-  name: windows-install-scripts
+  name: windows-2k19-install-scripts
   namespace: kubevirt-gitops
