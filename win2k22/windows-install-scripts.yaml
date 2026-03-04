@@ -236,7 +236,7 @@ data:
     Install-WindowsUpdate -AcceptAll -AutoReboot
 
     Start-Sleep -Duration (New-TimeSpan -Seconds 600); Stop-Computer
-  windows-install-vm.yaml: "apiVersion: kubevirt.io/v1\nkind: VirtualMachine\nmetadata:\n
+  windows-2k22-install-vm.yaml: "apiVersion: kubevirt.io/v1\nkind: VirtualMachine\nmetadata:\n
     \ annotations:\n    name.os.template.kubevirt.io/win2k22: Microsoft Windows Server
     2022\n    description: windows-2k22-install\n  labels:\n    app: windows-2k22-install\n
     \ name: windows-2k22-install\nspec:\n  runStrategy: Manual\n  template:\n    metadata:\n
