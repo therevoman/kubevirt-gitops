@@ -10,7 +10,7 @@ spec:
   source:
     path: virtualization
     repoURL: https://github.com/therevoman/kubevirt-gitops.git
-    targetRevision: ocs-old
+    targetRevision: HEAD
   syncPolicy:
     automated: {}
     syncOptions:

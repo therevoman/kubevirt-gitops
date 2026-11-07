@@ -1,15 +1,20 @@
-namespace: kubevirt-gitops
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Build namespace is kubevirt-gitops (set on each resource; the os-images RoleBinding must keep its own).
 resources:
 - install-iso.yaml
 - windows-install-sa.yaml
 - windows-install-rbac.yaml
 - windows-install-job.yaml
-
+# Mounted into the Job (/scripts) and into the build VM as a CD-ROM (autounattend.xml + post-install.ps1)
 configMapGenerator:
-- name: windows-install-scripts
+- name: windows-2k19-install-scripts
+  namespace: kubevirt-gitops
   files:
-  - config/autounattend.xml
   - config/install.sh
-  - config/post-install.ps1
   - config/windows-install-vm.yaml
   - config/clone-boot-source.yaml
+  - config/autounattend.xml
+  - config/post-install.ps1
+generatorOptions:
+  disableNameSuffixHash: true

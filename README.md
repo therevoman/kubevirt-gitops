@@ -49,23 +49,64 @@ boot sources for OpenShift Virtualization's included OS templates.
 The [vms](vms) directory works with the DataVolumes provided in
 [datavolumes](datavolumes) to create a Fedora and CentOS VM.
 
-### Microsoft Windows 2019 Server Install from ISO
+### Microsoft Windows boot sources (win2k19, win2k22, win11)
 
-The [win2k19](win2k19) directory holds an application and manifests for
-creating a boot source image of a Microsoft Windows 2019 Server VM.
+[win2k19](win2k19), [win2k22](win2k22) and [win11](win11) each build the boot-source PVC
+(`openshift-virtualization-os-images/win2k19`, `win2k22`, `win11`) that the matching
+`windows2k19-*`, `windows2k22-*` and `windows11-*` OpenShift Virtualization templates clone.
 
-This application requires a MS Windows 2019 Server installation ISO be
-downloaded and shared using a local web service accessible only to the cluster.
-The URL for the ISO is found in [install-iso.yaml](win2k19/install-iso.yaml)
-and should be changed for the local environment. Alternatively, the ISO may be
-manually uploaded to the kubevirt-gitops namespace as a DV, and the
-install-iso.yaml entry removed from
-[kustomization.yaml](win2k19/kustomization.yaml).
+Each app is a Kustomize `base/` plus `overlays/<cluster>`:
 
-Installation scripts can be found in [config](win2k19/config), including a job
-script which runs once the ISO is available, creates the VM, waits for it to
-shut down, and then copies the installed root disk into the boot source
-namespace. A short script is provided at
-[regen-configmap.sh](win2k19/regen-configmap.sh) that updates the ConfigMap
-supplied by the repo. If any changes are made, run the script to regenerate the
-ConfigMap, and make sure to check in any changes for ArgoCD to see them.
+```
+winXX/
+  base/                         # everything, cluster-agnostic
+    install-iso.yaml            # DataVolume importing the install ISO over HTTP
+    windows-install-{sa,rbac,job}.yaml
+    config/                     # -> ConfigMap windows-XX-install-scripts (configMapGenerator)
+      install.sh                #    Job: create VM, start it, wait for sysprep shutdown, clone to boot source
+      windows-install-vm.yaml   #    build VM (TPM/SecureBoot for win11)
+      clone-boot-source.yaml    #    DataVolume into openshift-virtualization-os-images
+      autounattend.xml          #    unattended install (also mounted into the VM as a CD-ROM)
+      post-install.ps1          #    virtio drivers, guest agent, cloudbase-init, sysprep /generalize
+  overlays/
+    openshift/                  # generic, no cluster specifics
+    snok/ sno/ ocs/ bm/         # per-cluster patches (today: ISO URL on ocs)
+```
+
+Cluster differences are kept out of the base:
+
+- **Storage**: DataVolumes use `spec.storage` without `accessModes`/`volumeMode`, so each
+  cluster's StorageProfile decides (RWX Block on ODF, RWO on LVMS).
+- **virtio-win**: `install.sh` reads the image from ConfigMap `openshift-cnv/virtio-win`, so it
+  always matches the installed OpenShift Virtualization release.
+- **Drive letters**: `autounattend.xml` and `post-install.ps1` find the scripts and virtio-win
+  CDs by their contents.
+- **ISO URL**: defaults to `http://qnas.revoweb.home/isos/...`; an overlay patches it (see
+  `overlays/ocs`).
+
+The build runs in namespace `kubevirt-gitops` and takes 30-90 minutes. `install.sh` exits at
+once if the boot-source PVC already exists; delete that PVC to rebuild.
+
+Run one directly:
+
+```
+oc create namespace kubevirt-gitops
+oc apply -k win11/overlays/snok
+oc logs -f job/windows-11-install -n kubevirt-gitops
+```
+
+or via Argo CD with the per-cluster app-of-apps in [clusters](clusters):
+`oc apply -k clusters/snok` creates `snok-win2k19-boot-source`, `snok-win2k22-boot-source` and
+`snok-win11-boot-source` Applications that track `main`. Sync is manual. The Job is a
+`PostSync` hook, so it runs after every sync and is a no-op once the boot source exists.
+
+Watch the install with `virtctl vnc windows-11-install -n kubevirt-gitops`. The build account
+is `Administrator` / `R3dh4t1!`; sysprep generalizes the image, and clones get their own
+identity from cloud-init/cloudbase-init or the template.
+
+## Clusters and branches
+
+All per-cluster branches (`sno`, `ocs`, `ocs-old`, `bm`, `win2k22`) were merged into `main` on
+2026-11-07. Cluster differences now live in `overlays/<cluster>` directories, and
+`clusters/<cluster>` holds that cluster's Applications. Add a cluster by adding an overlay to
+each app and a `clusters/<name>` directory; don't create a branch.

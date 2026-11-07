@@ -1,0 +1,16 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: win2k22-install-iso
+  namespace: kubevirt-gitops
+  annotations:
+    cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+    kubevirt.ui/provider: Microsoft
+spec:
+  source:
+    http:
+      url: http://qnas.revoweb.home/isos/windows/server-2022.iso     # per-cluster overlays may patch this
+  storage:
+    resources:
+      requests:
+        storage: 20Gi

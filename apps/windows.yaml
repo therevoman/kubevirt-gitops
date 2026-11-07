@@ -10,7 +10,7 @@ spec:
   project: default
   source:
     path: apps/overlays/windows
-    repoURL: https://github.com/cwilkers/kubevirt-gitops.git
+    repoURL: https://github.com/therevoman/kubevirt-gitops.git
     targetRevision: HEAD
   syncPolicy:
     automated: {}

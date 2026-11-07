@@ -1,0 +1,6 @@
+# App-of-apps for cluster "ocs": oc apply -k clusters/ocs
+# Each Application syncs <app>/overlays/ocs from main. Sync is manual: a build takes 30-90 min.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- applications.yaml

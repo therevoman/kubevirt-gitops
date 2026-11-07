@@ -1,0 +1,116 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  annotations:
+    name.os.template.kubevirt.io/win11: Microsoft Windows 11
+    description: windows-11-install (win11 boot-source build)
+  labels:
+    app: windows-11-install
+  name: windows-11-install
+spec:
+  runStrategy: Manual
+  dataVolumeTemplates:
+  - metadata:
+      name: windows-11-install-rootdisk
+    spec:
+      source:
+        blank: {}
+      storage:
+        resources:
+          requests:
+            storage: 64Gi
+  template:
+    metadata:
+      annotations:
+        vm.kubevirt.io/os: windows11
+        vm.kubevirt.io/workload: desktop
+      labels:
+        kubevirt.io/domain: windows-11-install
+        vm.kubevirt.io/name: windows-11-install
+    spec:
+      architecture: amd64
+      domain:
+        clock:
+          timer:
+            hpet:
+              present: false
+            hyperv: {}
+            pit:
+              tickPolicy: delay
+            rtc:
+              tickPolicy: catchup
+          utc: {}
+        cpu:
+          sockets: 1
+          cores: 4
+          threads: 1
+        memory:
+          guest: 8Gi
+        devices:
+          disks:
+          - name: rootdisk
+            bootOrder: 2
+            disk:
+              bus: sata                # same bus as the windows11 templates
+          - name: install-iso
+            bootOrder: 1
+            cdrom:
+              bus: sata
+          - name: windows-guest-tools
+            cdrom:
+              bus: sata
+          - name: windows-11-install-scripts
+            cdrom:
+              bus: sata
+          tpm: {}                      # Windows 11 requires TPM 2.0
+          inputs:
+          - bus: usb
+            name: tablet
+            type: tablet
+          interfaces:
+          - name: default
+            model: e1000e              # works before virtio-win is installed
+            masquerade: {}
+          rng: {}
+        features:
+          acpi: {}
+          apic: {}
+          smm: {}
+          hyperv:
+            frequencies: {}
+            ipi: {}
+            reenlightenment: {}
+            relaxed: {}
+            reset: {}
+            runtime: {}
+            spinlocks:
+              spinlocks: 8191
+            synic: {}
+            synictimer:
+              direct: {}
+            tlbflush: {}
+            vapic: {}
+            vpindex: {}
+        firmware:
+          bootloader:
+            efi:
+              secureBoot: true
+      evictionStrategy: None
+      hostname: windows-11-install
+      networks:
+      - name: default
+        pod: {}
+      terminationGracePeriodSeconds: 180
+      volumes:
+      - name: rootdisk
+        dataVolume:
+          name: windows-11-install-rootdisk
+      - name: install-iso
+        persistentVolumeClaim:
+          claimName: win11-install-iso
+      - name: windows-guest-tools
+        containerDisk:
+          image: VIRTIO_WIN_IMAGE      # replaced by install.sh
+      - name: windows-11-install-scripts
+        configMap:
+          name: windows-11-install-scripts

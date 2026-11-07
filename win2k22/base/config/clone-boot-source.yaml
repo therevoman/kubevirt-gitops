@@ -1,0 +1,18 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: win2k22
+  namespace: openshift-virtualization-os-images
+  annotations:
+    cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+    kubevirt.ui/provider: Microsoft
+spec:
+  source:
+    pvc:
+      namespace: BUILD_NAMESPACE        # replaced by install.sh
+      name: windows-2k22-install-rootdisk
+  # No accessModes/volumeMode: the StorageProfile picks them (RWX Block on ODF, RWO on LVMS).
+  storage:
+    resources:
+      requests:
+        storage: 60Gi               # the win2k22 templates clone this size; must not exceed it

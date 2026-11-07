@@ -1,0 +1,54 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ocs-win2k19-boot-source
+  namespace: openshift-gitops
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubevirt-gitops
+  source:
+    repoURL: https://github.com/therevoman/kubevirt-gitops.git
+    targetRevision: main
+    path: win2k19/overlays/ocs
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ocs-win2k22-boot-source
+  namespace: openshift-gitops
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubevirt-gitops
+  source:
+    repoURL: https://github.com/therevoman/kubevirt-gitops.git
+    targetRevision: main
+    path: win2k22/overlays/ocs
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ocs-win11-boot-source
+  namespace: openshift-gitops
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubevirt-gitops
+  source:
+    repoURL: https://github.com/therevoman/kubevirt-gitops.git
+    targetRevision: main
+    path: win11/overlays/ocs
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true

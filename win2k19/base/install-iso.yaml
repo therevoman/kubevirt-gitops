@@ -1,20 +1,16 @@
 apiVersion: cdi.kubevirt.io/v1beta1
 kind: DataVolume
 metadata:
+  name: win2k19-install-iso
+  namespace: kubevirt-gitops
   annotations:
     cdi.kubevirt.io/storage.bind.immediate.requested: "true"
     kubevirt.ui/provider: Microsoft
-  name: win2k19-install-iso
-  namespace: kubevirt-gitops
 spec:
-  pvc:
-    accessModes:
-    - ReadWriteOnce
+  source:
+    http:
+      url: http://qnas.revoweb.home/isos/windows/server-2019.iso     # per-cluster overlays may patch this
+  storage:
     resources:
       requests:
         storage: 20Gi
-    volumeMode: Block
-  source:
-    http:
-      url: http://192.168.20.14/isos/windows/server-2019.iso
-

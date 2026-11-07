@@ -10,7 +10,7 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: win2k19
+    path: win2k19/overlays/openshift
     repoURL: https://github.com/therevoman/kubevirt-gitops.git
     targetRevision: HEAD
   syncPolicy:

@@ -1,14 +1,29 @@
----
+# admin in the build namespace (create/start/delete the build VM), edit in the os-images namespace
+# (create the boot-source DataVolume).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: windows-install-cadmin
+  name: windows-2k19-install-admin
   namespace: kubevirt-gitops
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: cluster-admin
+  name: admin
 subjects:
 - kind: ServiceAccount
-  name: windows-install
+  name: windows-2k19-install
+  namespace: kubevirt-gitops
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: windows-2k19-install-image-edit
+  namespace: openshift-virtualization-os-images
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: os-images.kubevirt.io:edit
+subjects:
+- kind: ServiceAccount
+  name: windows-2k19-install
   namespace: kubevirt-gitops

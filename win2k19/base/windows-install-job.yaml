@@ -4,9 +4,13 @@ metadata:
   name: windows-2k19-install
   namespace: kubevirt-gitops
   annotations:
+    # Under Argo CD this runs after every sync; install.sh exits at once if the boot source exists.
     argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
-  ttlSecondsAfterFinished: 600
+  backoffLimit: 0
+  activeDeadlineSeconds: 21600      # 6h hard stop (Server images run Windows Update)
+  ttlSecondsAfterFinished: 86400
   template:
     spec:
       serviceAccountName: windows-2k19-install
@@ -14,13 +18,11 @@ spec:
       containers:
       - name: ose-cli
         image: registry.redhat.io/openshift4/ose-cli-rhel9:latest
+        command: ["/bin/bash", "/scripts/install.sh"]
         volumeMounts:
-        - name: windows-2k19-install-scripts
+        - name: scripts
           mountPath: /scripts
-        command: ["/bin/sh"]
-        args: ["/scripts/install.sh"]
       volumes:
-      - name: windows-2k19-install-scripts
+      - name: scripts
         configMap:
           name: windows-2k19-install-scripts
-

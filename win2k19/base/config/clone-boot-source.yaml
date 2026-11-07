@@ -9,12 +9,10 @@ metadata:
 spec:
   source:
     pvc:
-      namespace: kubevirt-gitops
+      namespace: BUILD_NAMESPACE        # replaced by install.sh
       name: windows-2k19-install-rootdisk
-  pvc:
-    accessModes:
-    - ReadWriteMany
-    volumeMode: Block
+  # No accessModes/volumeMode: the StorageProfile picks them (RWX Block on ODF, RWO on LVMS).
+  storage:
     resources:
       requests:
-        storage: 60Gi
+        storage: 60Gi               # the win2k19 templates clone this size; must not exceed it
