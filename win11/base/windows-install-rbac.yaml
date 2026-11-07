@@ -27,3 +27,30 @@ subjects:
 - kind: ServiceAccount
   name: windows-11-install
   namespace: kubevirt-gitops
+---
+# OpenShift only allows 'oc exec' into a pod if the caller may use the pod's SCC. install.sh execs
+# into the virt-launcher pod (SCC kubevirt-controller) to press a key at the EFI "boot from CD" prompt.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: windows-11-install-launcher-exec
+  namespace: kubevirt-gitops
+rules:
+- apiGroups: ["security.openshift.io"]
+  resources: ["securitycontextconstraints"]
+  resourceNames: ["kubevirt-controller"]
+  verbs: ["use"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: windows-11-install-launcher-exec
+  namespace: kubevirt-gitops
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: windows-11-install-launcher-exec
+subjects:
+- kind: ServiceAccount
+  name: windows-11-install
+  namespace: kubevirt-gitops

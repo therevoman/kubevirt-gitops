@@ -35,6 +35,8 @@ until [ "$(oc get vmi $NAME -n $NS -o jsonpath='{.status.phase}' 2>/dev/null)" =
 # EFI shows "Press any key to boot from CD or DVD..." for a few seconds: press it for the first 45s.
 POD=$(oc get pod -n $NS -l kubevirt.io/domain=$NAME -o name | head -1)
 log "VMI running ($POD); sending keys for the CD boot prompt"
+for n in 1 2 3 4 5; do oc exec -n $NS "$POD" -c compute -- virsh domstate ${NS}_$NAME >/dev/null 2>&1 && break; sleep 1; done \
+  || { log "cannot exec into $POD (SA needs 'use' on SCC kubevirt-controller); the CD boot prompt would time out"; oc exec -n $NS "$POD" -c compute -- true; exit 1; }
 for i in $(seq 1 45); do
   oc exec -n $NS "$POD" -c compute -- virsh send-key ${NS}_$NAME KEY_ENTER >/dev/null 2>&1
   sleep 1
