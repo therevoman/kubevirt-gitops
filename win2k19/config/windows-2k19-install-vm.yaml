@@ -2,21 +2,21 @@ apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
   annotations:
-    name.os.template.kubevirt.io/win2k22: Microsoft Windows Server 2022
-    description: windows-install
+    name.os.template.kubevirt.io/win2k19: Microsoft Windows Server 2019
+    description: windows-2k19-install
   labels:
-    app: windows-install
-  name: windows-install
+    app: windows-2k19-install
+  name: windows-2k19-install
 spec:
   runStrategy: Manual
   template:
     metadata:
       annotations:
-        vm.kubevirt.io/os: windows2k22
+        vm.kubevirt.io/os: windows2k19
         vm.kubevirt.io/workload: server
       labels:
-        kubevirt.io/domain: windows-install
-        vm.kubevirt.io/name: windows-install
+        kubevirt.io/domain: windows-2k19-install
+        vm.kubevirt.io/name: windows-2k19-install
         workload.template.kubevirt.io/server: 'true'
     spec:
       architecture: amd64
@@ -37,17 +37,17 @@ spec:
           threads: 1
         devices:
           disks:
-          - name: windows-install-rootdisk
+          - name: windows-2k19-install-rootdisk
             disk:
               bus: sata
-          - name: win2k22-install-iso
+          - name: win2k19-install-iso
             bootOrder: 1
             cdrom:
               bus: sata
           - name: windows-guest-tools
             cdrom:
               bus: sata
-          - name: windows-install-scripts
+          - name: windows-2k19-install-scripts
             cdrom:
               bus: sata
           inputs:
@@ -89,31 +89,38 @@ spec:
         memory:
           guest: 8Gi
       evictionStrategy: LiveMigrate
-      hostname: windows-install
+      hostname: windows-2k19-install
       networks:
       - name: default
         pod: {}
       terminationGracePeriodSeconds: 180
       volumes:
-      - name: windows-install-rootdisk 
+      - name: windows-2k19-install-rootdisk 
         dataVolume:
-          name: windows-install-rootdisk
-      - name: win2k22-install-iso
+          name: windows-2k19-install-rootdisk
+      - name: win2k19-install-iso
         persistentVolumeClaim:
-          claimName: win2k22-install-iso
+          claimName: win2k19-install-iso
       - name: windows-guest-tools
         containerDisk:
-          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.18
+<<<<<<<< HEAD:win2k19/base/config/windows-install-vm.yaml
+          image: registry.redhat.io/container-native-virtualization/virtio-win
       - name: windows-install-scripts
         configMap:
-          name: windows-install-scripts
+          name: WININST_CM
+========
+          image: registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.20
+      - name: windows-2k19-install-scripts
+        configMap:
+          name: windows-2k19-install-scripts
+>>>>>>>> origin/ocs-old:win2k19/config/windows-2k19-install-vm.yaml
   dataVolumeTemplates:
   - metadata:
-      name: windows-install-rootdisk
+      name: windows-2k19-install-rootdisk
     spec:
       pvc:
         accessModes:
-        - ReadWriteMany
+        - ReadWriteOnce
         volumeMode: Block
         resources:
           requests:

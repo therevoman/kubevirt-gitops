@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: windows-install
+  name: windows-2k19-install
   namespace: kubevirt-gitops
   annotations:
     argocd.argoproj.io/hook: PostSync
@@ -9,18 +9,18 @@ spec:
   ttlSecondsAfterFinished: 600
   template:
     spec:
-      serviceAccountName: windows-install
+      serviceAccountName: windows-2k19-install
       restartPolicy: Never
       containers:
       - name: ose-cli
         image: registry.redhat.io/openshift4/ose-cli-rhel9:latest
         volumeMounts:
-        - name: windows-install-scripts
+        - name: windows-2k19-install-scripts
           mountPath: /scripts
         command: ["/bin/sh"]
         args: ["/scripts/install.sh"]
       volumes:
-      - name: windows-install-scripts
+      - name: windows-2k19-install-scripts
         configMap:
-          name: windows-install-scripts
+          name: windows-2k19-install-scripts
 

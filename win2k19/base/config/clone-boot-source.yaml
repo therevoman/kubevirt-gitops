@@ -10,10 +10,10 @@ spec:
   source:
     pvc:
       namespace: kubevirt-gitops
-      name: windows-install-rootdisk
-  storage: 
+      name: windows-2k19-install-rootdisk
+  pvc:
     accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
     volumeMode: Block
     resources:
       requests:

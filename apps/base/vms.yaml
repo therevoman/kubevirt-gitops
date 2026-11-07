@@ -12,7 +12,7 @@ spec:
   source:
     path: vms
     repoURL: https://github.com/therevoman/kubevirt-gitops.git
-    targetRevision: HEAD
+    targetRevision: ocs-old
   syncPolicy:
     automated: {}
     syncOptions:

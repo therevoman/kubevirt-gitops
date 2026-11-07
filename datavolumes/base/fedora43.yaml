@@ -7,7 +7,7 @@ metadata:
     cdi.kubevirt.io/storage.usePopulator: "true"
     cdi.kubevirt.io/allowClaimAdoption: "true"
     cdi.kubevirt.io/cloneType: snapshot
-  name: fedora
+  name: fedora43
 spec:
   storage:
     resources:
@@ -15,7 +15,8 @@ spec:
         storage: 20Gi
   source:
     http:
-      url: https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-AmazonEC2-41-1.4.x86_64.raw.xz
+      url: https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2
+#      url: https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-AmazonEC2-41-1.4.x86_64.raw.xz
 #      https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
 #      https://mirror.arizona.edu/fedora/linux/releases/34/Cloud/x86_64/images/Fedora-Cloud-Base-34-1.2.x86_64.raw.xz
 

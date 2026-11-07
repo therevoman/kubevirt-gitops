@@ -1,7 +1,7 @@
 apiVersion: cdi.kubevirt.io/v1beta1
 kind: DataVolume
 metadata:
-  name: win2k19
+  name: win2k22
   namespace: openshift-virtualization-os-images
   annotations:
     cdi.kubevirt.io/storage.bind.immediate.requested: "true"
@@ -10,7 +10,7 @@ spec:
   source:
     pvc:
       namespace: kubevirt-gitops
-      name: windows-install-rootdisk
+      name: windows-2k22-install-rootdisk
   pvc:
     accessModes:
     - ReadWriteMany

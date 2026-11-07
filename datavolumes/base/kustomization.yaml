@@ -1,5 +1,5 @@
 resources:
-- fedora.yaml
-- centos8.yaml
+- fedora43.yaml
+- centos10.yaml
 commonAnnotations:
   cdi.kubevirt.io/storage.deleteAfterCompletion: "false"
