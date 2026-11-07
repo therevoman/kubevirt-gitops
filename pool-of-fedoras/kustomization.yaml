@@ -1,0 +1,8 @@
+namespace: pool-of-fedoras
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - service.yaml
+  - route.yaml
+  - virtualmachinepool.yaml

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fedora-http-service
+  namespace: pool-of-fedoras
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    kubevirt.io/vmpool: vm-pool-fedora
