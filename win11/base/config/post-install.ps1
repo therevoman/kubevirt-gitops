@@ -1,21 +1,68 @@
 # Windows 11 boot-source post-install (adapted from kubevirt-gitops/win2k22).
-# Installs virtio-win guest tools, the QEMU guest agent and cloudbase-init, then generalizes and
-# shuts down. The build Job clones the disk once the VM is off.
-# Log: C:\Windows\Temp\post-install.log  (sysprep: C:\Windows\System32\Sysprep\Panther\setupact.log)
+# Stage 1 (this script, FirstLogonCommands): virtio-win guest tools, QEMU guest agent, cloudbase-init,
+# clone first-boot hooks. Stage 2 (sysprep-stage2.ps1, SYSTEM startup task): Windows Update rounds
+# with a reboot between them, pre-sysprep checks and cleanup, then sysprep /generalize /shutdown.
+# The build Job clones the disk once the VM is off.
+#
+# Fail fast: every step stops on error. Progress and failures go to C:\Windows\Temp\build-status.txt,
+# which install.sh reads through the guest agent; a line starting "FAILED" ends the Job with an error
+# (the VM is left running for debugging).
+# Logs: C:\Windows\Temp\post-install.log, sysprep: C:\Windows\System32\Sysprep\Panther\setupact.log
 Start-Transcript -Path C:\Windows\Temp\post-install.log -Append
-$ErrorActionPreference = 'Continue'
-$BasePath = 'C:\Windows\Temp\Install'
-New-Item $BasePath -ItemType Directory -Force | Out-Null
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'      # Invoke-WebRequest is very slow with a progress bar
+
+# Shared by stage 1 and stage 2
+$Lib = 'C:\Windows\Temp\build-lib.ps1'
+Set-Content -Path $Lib -Encoding ASCII -Value @'
+$BuildStatus = 'C:\Windows\Temp\build-status.txt'
+function Set-BuildStatus([string]$Status) {
+    Set-Content -Path $BuildStatus -Encoding ASCII -Value "$(Get-Date -Format s) $Status"
+    Write-Output "BUILD STATUS: $Status"
+}
+function Set-BuildFailed([string]$Stage, $Err) {
+    $msg = "$($Err.Exception.Message)" -replace '\s+', ' '
+    Set-BuildStatus "FAILED $Stage line $($Err.InvocationInfo.ScriptLineNumber): $msg"
+}
+# Clones boot on virtio-blk / virtio-scsi; the image is built on SATA, so it boots in a clone only if
+# these drivers are in the driver store.
+function Assert-VirtioStorageDrivers {
+    $inf = (Get-WindowsDriver -Online).OriginalFileName | ForEach-Object { Split-Path $_ -Leaf }
+    foreach ($d in 'viostor.inf', 'vioscsi.inf') {
+        if ($inf -notcontains $d) { throw "$d is not in the driver store; clones on virtio disks would not boot" }
+    }
+    Write-Output 'viostor.inf and vioscsi.inf are in the driver store'
+}
+# Sysprep fails on Appx packages installed for a user but not provisioned for all users
+function Remove-UserOnlyAppx {
+    $Provisioned = (Get-AppxProvisionedPackage -Online).PackageName
+    Get-AppxPackage -AllUsers | Where-Object { -not $_.NonRemovable -and -not $_.IsFramework -and ($Provisioned -notcontains $_.PackageFullName) } |
+        ForEach-Object {
+            Write-Output "Removing non-provisioned Appx $($_.PackageFullName)"
+            Remove-AppxPackage -Package $_.PackageFullName -AllUsers -ErrorAction SilentlyContinue
+        }
+}
+'@
+. $Lib
+trap { Set-BuildFailed 'post-install' $_; Stop-Transcript; exit 1 }
+Set-BuildStatus 'post-install started'
+
+function Install-Msi([string]$Msi) {
+    $p = Start-Process msiexec.exe -Wait -PassThru -ArgumentList "/i `"$Msi`" /qn /norestart"
+    if ($p.ExitCode -notin 0, 3010) { throw "msiexec $Msi failed with exit code $($p.ExitCode)" }
+}
 
 # Keep Windows Update from staging servicing work in the background during the build; pending
-# servicing holds "reserved storage", which makes sysprep fail (0x800F0975). Removed again before sysprep.
+# servicing holds "reserved storage", which makes sysprep fail (0x800F0975). Stage 2 installs updates
+# explicitly; the clone's SetupComplete removes this policy (removing it before sysprep would let
+# background updates race sysprep).
 $AU = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU'
 New-Item $AU -Force | Out-Null
 Set-ItemProperty $AU NoAutoUpdate 1 -Type DWord
 
-
 # The virtio-win CD-ROM, found by content (drive letters vary)
 $Virtio = (Get-PSDrive -PSProvider FileSystem | Where-Object { Test-Path (Join-Path $_.Root 'virtio-win-gt-x64.msi') } | Select-Object -First 1).Root
+if (-not $Virtio) { throw 'virtio-win CD-ROM not found' }
 Write-Output "virtio-win drive: $Virtio"
 
 # Enable RDP
@@ -23,116 +70,187 @@ Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' 
 Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
 
 # Trust the Red Hat driver publisher so the driver install doesn't prompt
+$BasePath = 'C:\Windows\Temp\Install'
+New-Item $BasePath -ItemType Directory -Force | Out-Null
 $Cert = (Get-AuthenticodeSignature (Join-Path $Virtio 'Balloon\w11\amd64\balloon.sys')).SignerCertificate
 $CertFile = Join-Path $BasePath 'redhat.cer'
 [System.IO.File]::WriteAllBytes($CertFile, $Cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
-Import-Certificate -FilePath $CertFile -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+Import-Certificate -FilePath $CertFile -CertStoreLocation Cert:\LocalMachine\TrustedPublisher | Out-Null
 
-# virtio drivers + guest tools, then the QEMU guest agent
-Start-Process msiexec.exe -Wait -ArgumentList "/i `"$(Join-Path $Virtio 'virtio-win-gt-x64.msi')`" /qn /norestart"
-Start-Process msiexec.exe -Wait -ArgumentList "/i `"$(Join-Path $Virtio 'guest-agent\qemu-ga-x86_64.msi')`" /qn /norestart"
+# virtio drivers + guest tools, then the QEMU guest agent (install.sh reads build-status.txt through it)
+Set-BuildStatus 'installing virtio-win guest tools and the QEMU guest agent'
+Install-Msi (Join-Path $Virtio 'virtio-win-gt-x64.msi')
+Install-Msi (Join-Path $Virtio 'guest-agent\qemu-ga-x86_64.msi')
+Assert-VirtioStorageDrivers
 
 # Make sure nothing got encrypted (golden image must not be BitLocker-protected)
-reg add HKLM\SYSTEM\CurrentControlSet\Control\BitLocker /v PreventDeviceEncryption /t REG_DWORD /d 1 /f
+Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Control\BitLocker PreventDeviceEncryption 1 -Type DWord
 $bl = Get-BitLockerVolume -MountPoint C: -ErrorAction SilentlyContinue
 if ($bl -and $bl.VolumeStatus -ne 'FullyDecrypted') {
-    Disable-BitLocker -MountPoint C:
+    Disable-BitLocker -MountPoint C: | Out-Null
     while ((Get-BitLockerVolume -MountPoint C:).VolumeStatus -ne 'FullyDecrypted') { Start-Sleep 10 }
 }
 
-# cloudbase-init (cloud-init for Windows; used by the template's cloud-init/sysprep volumes)
-$Cloudinit = Join-Path $BasePath 'CloudbaseInitSetup_Stable_x64.msi'
+# cloudbase-init (cloud-init for Windows; used by the template's cloud-init/sysprep volumes).
+# Pinned: the "Stable" link moves between releases. To upgrade, change both lines.
+Set-BuildStatus 'installing cloudbase-init'
+$CbiUrl = 'https://www.cloudbase.it/downloads/CloudbaseInitSetup_1_1_8_x64.msi'
+$CbiSha256 = '0e7fa42e0cbc0ce7657f85730b0c6cc7afc4087a3639df0ff51a721a0be19bd5'
+$Cloudinit = Join-Path $BasePath 'CloudbaseInitSetup_x64.msi'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -UseBasicParsing https://www.cloudbase.it/downloads/CloudbaseInitSetup_Stable_x64.msi -OutFile $Cloudinit
-Start-Process msiexec.exe -Wait -ArgumentList "/i `"$Cloudinit`" /qn /norestart"
+Invoke-WebRequest -UseBasicParsing $CbiUrl -OutFile $Cloudinit
+$hash = (Get-FileHash $Cloudinit -Algorithm SHA256).Hash
+if ($hash -ne $CbiSha256) { throw "cloudbase-init MSI SHA256 $hash does not match the pinned $CbiSha256" }
+$sig = Get-AuthenticodeSignature $Cloudinit
+if ($sig.Status -ne 'Valid') { throw "cloudbase-init MSI signature is $($sig.Status)" }
+Write-Output "cloudbase-init MSI signed by $($sig.SignerCertificate.Subject)"
+Install-Msi $Cloudinit
 
-# Sysprep fails on Appx packages installed for a user but not provisioned for all users
-$Provisioned = (Get-AppxProvisionedPackage -Online).PackageName
-Get-AppxPackage | Where-Object { -not $_.NonRemovable -and -not $_.IsFramework -and ($Provisioned -notcontains $_.PackageFullName) } |
-    ForEach-Object { Write-Output "Removing non-provisioned Appx $($_.PackageFullName)"; Remove-AppxPackage -Package $_.PackageFullName -ErrorAction SilentlyContinue }
-
+Remove-UserOnlyAppx
 Remove-Item $BasePath -Recurse -Force
 
 # cloudbase-init: only probe the metadata sources KubeVirt provides (config drive / NoCloud CD).
 # The default list also polls the OpenStack/EC2/MAAS endpoints at 169.254.169.254, which adds 10-20+
 # minutes of timeouts to every VM's first boot ("Getting ready" / "Still working on a few things").
 $CbiConf = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf'
+$MetadataServices = 'metadata_services=cloudbaseinit.metadata.services.configdrive.ConfigDriveService,cloudbaseinit.metadata.services.nocloudservice.NoCloudConfigDriveService'
 foreach ($f in 'cloudbase-init.conf', 'cloudbase-init-unattend.conf') {
     $p = Join-Path $CbiConf $f
-    (Get-Content $p) -replace '^metadata_services=.*', 'metadata_services=cloudbaseinit.metadata.services.configdrive.ConfigDriveService,cloudbaseinit.metadata.services.nocloudservice.NoCloudConfigDriveService' |
-        Set-Content $p -Encoding ASCII
-    Select-String -Path $p -Pattern '^metadata_services'
+    (Get-Content $p) -replace '^metadata_services=.*', $MetadataServices | Set-Content $p -Encoding ASCII
+    if (-not (Select-String -Path $p -SimpleMatch $MetadataServices -Quiet)) { throw "$f has no metadata_services line to restrict" }
 }
 
+# Clone first-boot hooks.
 # Honor a KubeVirt sysprep disk. Sysprep caches cloudbase-init's Unattend.xml in C:\Windows\Panther,
 # which outranks an answer file on a CD, so a sysprep volume would be ignored. A first specialize
-# command copies unattend.xml/autounattend.xml from any attached CD to C:\Windows\Panther\Unattend\,
-# which outranks the cache when Setup looks for an answer file again at the start of oobeSystem
+# command copies the answer file from the sysprep volume to C:\Windows\Panther\Unattend\, which
+# outranks the cache when Setup looks for an answer file again at the start of oobeSystem
 # (overwriting the cache itself does not work: Setup rewrites it after specialize). The oobeSystem
 # pass (local accounts, OOBE settings) then uses the VM's answer file; its specialize settings
-# (computer name, time zone) are already past. SetupComplete.cmd deletes the copy (it holds passwords).
+# (computer name, time zone) are already past. SetupComplete deletes the copy (it holds passwords).
 $Scripts = 'C:\Windows\Setup\Scripts'
 New-Item $Scripts -ItemType Directory -Force | Out-Null
 Set-Content -Path "$Scripts\use-sysprep-cd.ps1" -Encoding ASCII -Value @'
+# Only KubeVirt's sysprep volume is used: a CD labelled "unattendCD". Answer files on other disks
+# (data disks, the install ISO, a cloud-init drive) are ignored. .NET only: no WMI during specialize.
 $log = 'C:\Windows\Panther\use-sysprep-cd.log'
-$f = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Root -ne 'C:\' } |
-    ForEach-Object { Get-ChildItem $_.Root -File -ErrorAction SilentlyContinue } |
-    Where-Object { $_.Name -in 'unattend.xml', 'autounattend.xml' } | Select-Object -First 1
-if ($f) {
-    New-Item C:\Windows\Panther\Unattend -ItemType Directory -Force | Out-Null
-    Copy-Item $f.FullName C:\Windows\Panther\Unattend\Unattend.xml -Force
-    "copied $($f.FullName) to C:\Windows\Panther\Unattend\Unattend.xml" | Out-File $log
-}
-else { 'no sysprep answer file found' | Out-File $log }
+$cd = @([IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq 'CDRom' -and $_.IsReady -and $_.VolumeLabel -eq 'unattendCD' })
+if ($cd.Count -eq 0) { 'no sysprep volume (CD labelled unattendCD); using the image defaults' | Out-File $log; exit 0 }
+if ($cd.Count -gt 1) { "more than one sysprep volume ($($cd.Name -join ', ')); using none" | Out-File $log; exit 0 }
+$f = foreach ($n in 'Unattend.xml', 'autounattend.xml') { $p = Join-Path $cd[0].RootDirectory.FullName $n; if (Test-Path $p) { $p; break } }
+if (-not $f) { "sysprep volume $($cd[0].Name) has no Unattend.xml or autounattend.xml" | Out-File $log; exit 0 }
+New-Item C:\Windows\Panther\Unattend -ItemType Directory -Force | Out-Null
+Copy-Item $f C:\Windows\Panther\Unattend\Unattend.xml -Force
+"copied $f to C:\Windows\Panther\Unattend\Unattend.xml" | Out-File $log
 exit 0
 '@
 # Runs as SYSTEM after setup completes, before the first logon
-Add-Content -Path "$Scripts\SetupComplete.cmd" -Encoding ASCII -Value @(
-    'if exist C:\Windows\Panther\Unattend\Unattend.xml del /f /q C:\Windows\Panther\Unattend\Unattend.xml',
-    'rem OOBE leaves its temporary account behind when an answer file creates the local accounts',
-    'net user defaultuser0 >nul 2>&1 && net user defaultuser0 /delete')
-$UA = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\Unattend.xml'
+Set-Content -Path "$Scripts\setup-complete.ps1" -Encoding ASCII -Value @'
+Start-Transcript -Path C:\Windows\Panther\setup-complete.log
+# The sysprep-disk answer file copy holds passwords
+Remove-Item C:\Windows\Panther\Unattend\Unattend.xml -Force -ErrorAction SilentlyContinue
+# OOBE leaves its temporary account behind when an answer file creates the local accounts
+if (Get-LocalUser defaultuser0 -ErrorAction SilentlyContinue) { Remove-LocalUser defaultuser0 }
+# The build kept automatic updates off until sysprep; turn them back on for the clone
+Remove-Item 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Recurse -Force -ErrorAction SilentlyContinue
+# Grow C: when the clone's disk is larger than the image (C: is the last partition)
+$max = (Get-PartitionSupportedSize -DriveLetter C).SizeMax
+$size = (Get-Partition -DriveLetter C).Size
+if ($max -gt $size + 100MB) { Resize-Partition -DriveLetter C -Size $max; "C: grown from $size to $max bytes" }
+# Build leftovers
+Remove-Item C:\Windows\Temp\build-*, C:\Windows\Temp\sysprep-stage2.ps1 -Force -ErrorAction SilentlyContinue
+Stop-Transcript
+'@
+Add-Content -Path "$Scripts\SetupComplete.cmd" -Encoding ASCII -Value "powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Scripts\setup-complete.ps1"
+
+$UA = Join-Path $CbiConf 'Unattend.xml'
 $U = 'urn:schemas-microsoft-com:unattend'; $W = 'http://schemas.microsoft.com/WMIConfig/2002/State'
 [xml]$x = Get-Content $UA
 $ns = New-Object Xml.XmlNamespaceManager $x.NameTable; $ns.AddNamespace('u', $U)
 $rs = $x.SelectSingleNode("//u:settings[@pass='specialize']/u:component[@name='Microsoft-Windows-Deployment']/u:RunSynchronous", $ns)
-if (-not $rs) { Write-Error 'cloudbase-init Unattend.xml has no specialize RunSynchronous; sysprep disks will be ignored' }
-else {
-    foreach ($o in $rs.SelectNodes('u:RunSynchronousCommand/u:Order', $ns)) { $o.InnerText = [string]([int]$o.InnerText + 1) }
-    $c = $x.CreateElement('RunSynchronousCommand', $U)
-    $a = $x.CreateAttribute('wcm', 'action', $W); $a.Value = 'add'; [void]$c.Attributes.Append($a)
-    foreach ($kv in @(@('Order', '1'), @('Path', "powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Scripts\use-sysprep-cd.ps1"), @('Description', 'Use the answer file from a sysprep disk'))) {
-        $e = $x.CreateElement($kv[0], $U); $e.InnerText = $kv[1]; [void]$c.AppendChild($e)
-    }
-    [void]$rs.PrependChild($c)
-    $x.Save($UA)
-    Select-String -Path $UA -Pattern '<Order>|<Path>' | ForEach-Object { $_.Line.Trim() }
+if (-not $rs) { throw 'cloudbase-init Unattend.xml has no specialize RunSynchronous; sysprep disks would be ignored' }
+foreach ($o in $rs.SelectNodes('u:RunSynchronousCommand/u:Order', $ns)) { $o.InnerText = [string]([int]$o.InnerText + 1) }
+$c = $x.CreateElement('RunSynchronousCommand', $U)
+$a = $x.CreateAttribute('wcm', 'action', $W); $a.Value = 'add'; [void]$c.Attributes.Append($a)
+foreach ($kv in @(@('Order', '1'), @('Path', "powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Scripts\use-sysprep-cd.ps1"), @('Description', 'Use the answer file from a sysprep disk'))) {
+    $e = $x.CreateElement($kv[0], $U); $e.InnerText = $kv[1]; [void]$c.AppendChild($e)
 }
+[void]$rs.PrependChild($c)
+$x.Save($UA)
+Select-String -Path $UA -Pattern '<Order>|<Path>' | ForEach-Object { $_.Line.Trim() }
 
-# --- Generalize ----------------------------------------------------------------------------------
-# Reboot so pending servicing completes, then run sysprep from a one-shot SYSTEM startup task.
-# If sysprep fails the VM stays up (see C:\Windows\System32\Sysprep\Panther\setupact.log) and the
-# build Job times out instead of cloning a bad image.
+# --- Stage 2: Windows Update, then generalize --------------------------------------------------
+# A SYSTEM startup task that runs on every boot until sysprep: each round installs the available
+# updates and reboots, until Windows Update offers nothing and no reboot is pending.
 $Stage2 = 'C:\Windows\Temp\sysprep-stage2.ps1'
 Set-Content -Path $Stage2 -Encoding UTF8 -Value @'
 Start-Transcript -Path C:\Windows\Temp\post-install.log -Append
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+. C:\Windows\Temp\build-lib.ps1
+trap { Set-BuildFailed 'stage2' $_; Stop-Transcript; exit 1 }
+Start-Sleep -Seconds 60                       # let services settle after boot
+
+# Windows Update rounds. Drivers and feature upgrades are excluded (virtio drivers come from
+# virtio-win; the image stays on the ISO's release). A transient error reboots into another round.
+$MaxRounds = 8
+$RoundFile = 'C:\Windows\Temp\build-wu-round.txt'
+$round = 1 + [int](Get-Content $RoundFile -ErrorAction SilentlyContinue)
+Set-Content $RoundFile $round
+if ($round -gt $MaxRounds) { throw "Windows Update still not done after $MaxRounds rounds; see post-install.log" }
+Set-BuildStatus "windows update round $round"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$retry = $false
+try {
+    if (-not (Get-Module -ListAvailable PSWindowsUpdate)) {
+        Install-PackageProvider NuGet -MinimumVersion 2.8.5.201 -Force | Out-Null
+        Install-Module PSWindowsUpdate -Force -AcceptLicense -Confirm:$false
+    }
+    Import-Module PSWindowsUpdate
+    $wu = @{ NotCategory = 'Drivers', 'Upgrades'; NotTitle = 'Preview' }
+    $updates = @(Get-WindowsUpdate @wu)
+    if ($updates.Count -gt 0) {
+        Set-BuildStatus "windows update round $($round): installing $($updates.Count) updates"
+        Install-WindowsUpdate @wu -AcceptAll -IgnoreReboot | Format-Table -AutoSize | Out-String -Width 200
+        $retry = $true
+    }
+    elseif (Get-WURebootStatus -Silent) { $retry = $true }
+}
+catch { Write-Output "Windows Update error in round $($round): $_"; $retry = $true }
+if ($retry) { Stop-Transcript; Restart-Computer -Force; exit 0 }
+
+Set-BuildStatus 'preparing sysprep'
 Unregister-ScheduledTask -TaskName BootSourceSysprep -Confirm:$false
-Start-Sleep -Seconds 60
-Remove-Item 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Recurse -Force -ErrorAction SilentlyContinue
+Assert-VirtioStorageDrivers
+# Auto-logon was only for the build; don't leave it (or its password) in the image
+$WL = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
+Set-ItemProperty $WL AutoAdminLogon '0'
+Remove-ItemProperty $WL -Name DefaultPassword, AutoLogonCount -ErrorAction SilentlyContinue
 # Reserved storage (Windows 10 1903+/Server 2022+) blocks sysprep while a servicing scenario is active
 $RM = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager'
 if (Test-Path $RM) {
     Set-ItemProperty $RM ActiveScenario 0 -Type DWord
     dism.exe /Online /Set-ReservedStorageState /State:Disabled
+    if ($LASTEXITCODE -ne 0) { throw "dism /Set-ReservedStorageState failed ($LASTEXITCODE)" }
 }
+# Again right before sysprep: the Store may have updated an app per-user since stage 1
+Remove-UserOnlyAppx
+
+Set-BuildStatus 'sysprep running'
 Stop-Transcript
-# Quote the whole argument: the path has spaces
 $Conf = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf'
 Set-Location $Conf
-& C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown "/unattend:$Conf\Unattend.xml"
+# Quote the whole argument: the path has spaces. /quiet: a failure must not wait on a dialog.
+& C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /shutdown /quiet "/unattend:$Conf\Unattend.xml"
+# Success shuts the VM down; still running after 5 minutes means sysprep failed
+Start-Sleep -Seconds 300
+$err = Get-Content C:\Windows\System32\Sysprep\Panther\setuperr.log -Tail 3 -ErrorAction SilentlyContinue
+Set-BuildStatus "FAILED sysprep: $(($err -join ' ') -replace '\s+', ' ')"
+exit 1
 '@
 Register-ScheduledTask -TaskName BootSourceSysprep -Force -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest `
     -Trigger (New-ScheduledTaskTrigger -AtStartup) `
-    -Action (New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -ExecutionPolicy Bypass -File $Stage2")
+    -Action (New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -ExecutionPolicy Bypass -File $Stage2") | Out-Null
+Set-BuildStatus 'post-install done; rebooting into Windows Update'
 Stop-Transcript
 Restart-Computer -Force

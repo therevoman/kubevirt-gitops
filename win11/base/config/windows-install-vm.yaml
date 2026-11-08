@@ -112,5 +112,5 @@ spec:
         containerDisk:
           image: VIRTIO_WIN_IMAGE      # replaced by install.sh
       - name: windows-11-install-scripts
-        configMap:
-          name: windows-11-install-scripts
+        secret:
+          secretName: windows-11-install-cd   # created by install.sh (holds the build password)

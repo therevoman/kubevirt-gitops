@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Windows 11 Pro unattended install for the win11 boot source (adapted from kubevirt-gitops/win2k22).
-     Disk is SATA, so no WinPE driver injection. Post-install runs from the scripts CD-ROM. -->
+     The build VM's disk is SATA, so WinPE needs no driver injection. Clones use virtio disks: post-install
+     installs virtio-win and checks viostor/vioscsi are in the driver store before sysprep.
+     Post-install runs from the scripts CD-ROM. BUILD_ADMIN_PASSWORD is replaced by install.sh with a random
+     password for each build; nobody needs it after the build. -->
 <unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <settings pass="windowsPE">
         <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
@@ -82,6 +85,9 @@
             </UserData>
         </component>
     </settings>
+    <!-- UAC off, and it stays off in every clone (sysprep keeps it): these VMs are used over Remote Desktop,
+         where UAC's secure-desktop prompts can black-screen or freeze the session. Side effects: every admin
+         process runs elevated, and some Store (UWP) apps refuse to start while UAC is off. -->
     <settings pass="offlineServicing">
         <component name="Microsoft-Windows-LUA-Settings" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
             <EnableLUA>false</EnableLUA>
@@ -125,13 +131,14 @@
             <!-- Enables the built-in Administrator (disabled by default on Windows 11) -->
             <UserAccounts>
                 <AdministratorPassword>
-                    <Value>R3dh4t1!</Value>
+                    <Value>BUILD_ADMIN_PASSWORD</Value>
                     <PlainText>true</PlainText>
                 </AdministratorPassword>
             </UserAccounts>
+            <!-- Build only: stage 2 of post-install clears the auto-logon registry values before sysprep -->
             <AutoLogon>
                 <Password>
-                    <Value>R3dh4t1!</Value>
+                    <Value>BUILD_ADMIN_PASSWORD</Value>
                     <PlainText>true</PlainText>
                 </Password>
                 <Enabled>true</Enabled>
