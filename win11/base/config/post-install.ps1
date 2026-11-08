@@ -112,16 +112,46 @@ Install-Msi $Cloudinit
 Remove-UserOnlyAppx
 Remove-Item $BasePath -Recurse -Force
 
-# cloudbase-init: only probe the metadata sources KubeVirt provides (config drive / NoCloud CD).
-# The default list also polls the OpenStack/EC2/MAAS endpoints at 169.254.169.254, which adds 10-20+
-# minutes of timeouts to every VM's first boot ("Getting ready" / "Still working on a few things").
+# cloudbase-init settings, written into [DEFAULT] of both config files (replacing an existing line or
+# adding one: the installer writes metadata_services only into cloudbase-init-unattend.conf).
+#  - metadata_services: only the sources KubeVirt provides (config drive / NoCloud CD). The defaults
+#    also poll HTTP endpoints (169.254.169.254, the DHCP server); on this network the UniFi gateway
+#    answers with its login page, which cloudbase-init accepted as "CloudStack" metadata after 6+
+#    minutes of timeouts on every first boot.
+#  - plugins (service run): the defaults without CreateUser/SetUserPassword/SSHPublicKeys/
+#    WinRMCertificateAuth. Those manage cloudbase-init's own "Admin" account: they create it with a
+#    password nobody is told and, if an "Admin" already exists (e.g. from a sysprep answer file),
+#    reset its password to a random value. Accounts come from a sysprep volume or the guest agent;
+#    cloud-init user data (scripts, cloud-config users) still works.
 $CbiConf = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf'
-$MetadataServices = 'metadata_services=cloudbaseinit.metadata.services.configdrive.ConfigDriveService,cloudbaseinit.metadata.services.nocloudservice.NoCloudConfigDriveService'
-foreach ($f in 'cloudbase-init.conf', 'cloudbase-init-unattend.conf') {
-    $p = Join-Path $CbiConf $f
-    (Get-Content $p) -replace '^metadata_services=.*', $MetadataServices | Set-Content $p -Encoding ASCII
-    if (-not (Select-String -Path $p -SimpleMatch $MetadataServices -Quiet)) { throw "$f has no metadata_services line to restrict" }
+function Set-CbiOption([string]$File, [string]$Key, [string]$Value) {
+    $p = Join-Path $CbiConf $File
+    $lines = [Collections.Generic.List[string]](Get-Content $p)
+    $line = "$Key=$Value"
+    $i = $lines.FindIndex([Predicate[string]] { param($l) $l -match "^\s*$Key\s*=" }.GetNewClosure())
+    if ($i -ge 0) { $lines[$i] = $line }
+    else {
+        $d = $lines.FindIndex([Predicate[string]] { param($l) $l.Trim() -eq '[DEFAULT]' }.GetNewClosure())
+        if ($d -lt 0) { throw "$File has no [DEFAULT] section" }
+        $lines.Insert($d + 1, $line)
+    }
+    Set-Content $p $lines -Encoding ASCII
+    if (-not (Select-String -Path $p -SimpleMatch $line -Quiet)) { throw "could not set $Key in $File" }
+    Write-Output "${File}: $line"
 }
+$MetadataServices = 'cloudbaseinit.metadata.services.configdrive.ConfigDriveService,cloudbaseinit.metadata.services.nocloudservice.NoCloudConfigDriveService'
+foreach ($f in 'cloudbase-init.conf', 'cloudbase-init-unattend.conf') { Set-CbiOption $f metadata_services $MetadataServices }
+Set-CbiOption cloudbase-init.conf plugins (@(
+    'cloudbaseinit.plugins.common.mtu.MTUPlugin'
+    'cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin'
+    'cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin'
+    'cloudbaseinit.plugins.common.networkconfig.NetworkConfigPlugin'
+    'cloudbaseinit.plugins.windows.licensing.WindowsLicensingPlugin'
+    'cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin'
+    'cloudbaseinit.plugins.common.userdata.UserDataPlugin'
+    'cloudbaseinit.plugins.windows.winrmlistener.ConfigWinRMListenerPlugin'
+    'cloudbaseinit.plugins.common.localscripts.LocalScriptsPlugin'
+) -join ',')
 
 # Clone first-boot hooks.
 # Honor a KubeVirt sysprep disk. Sysprep caches cloudbase-init's Unattend.xml in C:\Windows\Panther,
