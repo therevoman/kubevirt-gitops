@@ -67,7 +67,7 @@ for n in 1 2 3 4 5; do vexec virsh domstate $DOM >/dev/null 2>&1 && break; sleep
 # Space or Enter would press the focused button (Cancel) and a letter could trigger a hotkey.
 ISO_DEV=$(vexec virsh domblklist $DOM | awk '/install-iso/ {print $1}')
 # (if the ISO's device is not found, the totals for all disks work too: the blank root disk is barely read)
-log "VMI running ($POD); pressing "d" for the CD boot prompt (ISO device: ${ISO_DEV:-unknown, using all disks})"
+log "VMI running ($POD); pressing 'd' for the CD boot prompt (ISO device: ${ISO_DEV:-unknown, using all disks})"
 booted=0
 for i in $(seq 1 90); do
   rd=$(vexec virsh domblkstat $DOM $ISO_DEV 2>/dev/null | awk '$2 == "rd_bytes" {s += $3} END {print s + 0}')
