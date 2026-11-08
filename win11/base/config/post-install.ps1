@@ -256,13 +256,25 @@ Set-Content $RoundFile $round
 if ($round -gt $MaxRounds) { throw "Windows Update still not done after $MaxRounds rounds; see post-install.log" }
 Set-BuildStatus "windows update round $round"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# PSWindowsUpdate from the PowerShell Gallery. Retried in place for network errors; anything still
+# failing is not a Windows Update problem, so it fails the build here instead of burning reboot rounds.
+# (Windows PowerShell 5.1 ships PowerShellGet 1.0.0.1: no -AcceptLicense; -Force skips the
+# untrusted-repository prompt.)
+for ($i = 1; -not (Get-Module -ListAvailable PSWindowsUpdate); $i++) {
+    try {
+        Install-PackageProvider NuGet -MinimumVersion 2.8.5.201 -Force | Out-Null
+        Install-Module PSWindowsUpdate -Scope AllUsers -Force -Confirm:$false
+    }
+    catch {
+        if ($i -ge 3) { throw "installing PSWindowsUpdate failed 3 times: $_" }
+        Write-Output "installing PSWindowsUpdate failed (attempt $i), retrying: $_"; Start-Sleep 30
+    }
+}
+Import-Module PSWindowsUpdate
+# The same error in two rounds in a row is not transient: fail instead of rebooting again.
+$ErrFile = 'C:\Windows\Temp\build-wu-lasterror.txt'
 $retry = $false
 try {
-    if (-not (Get-Module -ListAvailable PSWindowsUpdate)) {
-        Install-PackageProvider NuGet -MinimumVersion 2.8.5.201 -Force | Out-Null
-        Install-Module PSWindowsUpdate -Force -AcceptLicense -Confirm:$false
-    }
-    Import-Module PSWindowsUpdate
     $wu = @{ NotCategory = 'Drivers', 'Upgrades'; NotTitle = 'Preview' }
     $updates = @(Get-WindowsUpdate @wu)
     if ($updates.Count -gt 0) {
@@ -272,7 +284,13 @@ try {
     }
     elseif (Get-WURebootStatus -Silent) { $retry = $true }
 }
-catch { Write-Output "Windows Update error in round $($round): $_"; $retry = $true }
+catch {
+    $msg = "$_"
+    Write-Output "Windows Update error in round $($round): $msg"
+    if ($msg -eq (Get-Content $ErrFile -Raw -ErrorAction SilentlyContinue)) { throw "Windows Update failed twice with: $msg" }
+    Set-Content $ErrFile $msg -NoNewline
+    $retry = $true
+}
 if ($retry) { Stop-Transcript; Restart-Computer -Force; exit 0 }
 
 Set-BuildStatus 'preparing sysprep'
