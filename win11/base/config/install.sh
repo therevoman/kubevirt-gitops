@@ -62,17 +62,17 @@ vexec() { oc exec -n $NS "$POD" -c compute -- "$@"; }
 for n in 1 2 3 4 5; do vexec virsh domstate $DOM >/dev/null 2>&1 && break; sleep 1; done \
   || { log "cannot exec into $POD (SA needs 'use' on SCC kubevirt-controller); the CD boot prompt would time out"; vexec true; exit 1; }
 
-# EFI shows "Press any key to boot from CD or DVD..." for a few seconds. Press Space until the VM is
+# EFI shows "Press any key to boot from CD or DVD..." for a few seconds. Press "d" until the VM is
 # reading the ISO in bulk, i.e. booting from it; stopping there keeps keys out of Windows Setup, where
-# Space or Enter would press the focused button (Cancel).
+# Space or Enter would press the focused button (Cancel) and a letter could trigger a hotkey.
 ISO_DEV=$(vexec virsh domblklist $DOM | awk '/install-iso/ {print $1}')
 # (if the ISO's device is not found, the totals for all disks work too: the blank root disk is barely read)
-log "VMI running ($POD); pressing Space for the CD boot prompt (ISO device: ${ISO_DEV:-unknown, using all disks})"
+log "VMI running ($POD); pressing "d" for the CD boot prompt (ISO device: ${ISO_DEV:-unknown, using all disks})"
 booted=0
 for i in $(seq 1 90); do
   rd=$(vexec virsh domblkstat $DOM $ISO_DEV 2>/dev/null | awk '$2 == "rd_bytes" {s += $3} END {print s + 0}')
   if [ "${rd:-0}" -gt 52428800 ]; then booted=1; break; fi
-  vexec virsh send-key $DOM KEY_SPACE >/dev/null 2>&1
+  vexec virsh send-key $DOM KEY_D >/dev/null 2>&1
   sleep 1
 done
 [ $booted = 1 ] || { log "FAILED: the VM did not boot from the install ISO within 90s (CD boot prompt missed?)"; exit 1; }
