@@ -65,23 +65,32 @@ $Virtio = (Get-PSDrive -PSProvider FileSystem | Where-Object { Test-Path (Join-P
 if (-not $Virtio) { throw 'virtio-win CD-ROM not found' }
 Write-Output "virtio-win drive: $Virtio"
 
-# Enable RDP
-Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
-Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
-
-# Trust the Red Hat driver publisher so the driver install doesn't prompt
+# Trust the Red Hat driver publisher so a driver install can't prompt. Best effort: Import-Certificate
+# fails with E_ACCESSDENIED here (it always did; older builds ignored the error) and the quiet MSI
+# installs drivers without it. The driver-store check below is what must pass.
 $BasePath = 'C:\Windows\Temp\Install'
 New-Item $BasePath -ItemType Directory -Force | Out-Null
-$Cert = (Get-AuthenticodeSignature (Join-Path $Virtio 'Balloon\w11\amd64\balloon.sys')).SignerCertificate
-$CertFile = Join-Path $BasePath 'redhat.cer'
-[System.IO.File]::WriteAllBytes($CertFile, $Cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
-Import-Certificate -FilePath $CertFile -CertStoreLocation Cert:\LocalMachine\TrustedPublisher | Out-Null
+try {
+    $Cert = (Get-AuthenticodeSignature (Join-Path $Virtio 'Balloon\w11\amd64\balloon.sys')).SignerCertificate
+    $CertFile = Join-Path $BasePath 'redhat.cer'
+    [System.IO.File]::WriteAllBytes($CertFile, $Cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
+    certutil.exe -f -addstore TrustedPublisher $CertFile | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "certutil -addstore TrustedPublisher exit code $LASTEXITCODE" }
+    Write-Output 'Red Hat driver publisher added to TrustedPublisher'
+}
+catch { Write-Warning "Could not add the Red Hat publisher certificate (continuing): $_" }
 
-# virtio drivers + guest tools, then the QEMU guest agent (install.sh reads build-status.txt through it)
+# virtio drivers + guest tools (including the virtio-serial driver the guest agent talks over), then the
+# QEMU guest agent. These come first: install.sh can only see build-status.txt once the agent runs, so a
+# failure before this point only shows up as its "no status from the guest" timeout.
 Set-BuildStatus 'installing virtio-win guest tools and the QEMU guest agent'
 Install-Msi (Join-Path $Virtio 'virtio-win-gt-x64.msi')
 Install-Msi (Join-Path $Virtio 'guest-agent\qemu-ga-x86_64.msi')
 Assert-VirtioStorageDrivers
+
+# Enable RDP
+Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
+Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
 
 # Make sure nothing got encrypted (golden image must not be BitLocker-protected)
 Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Control\BitLocker PreventDeviceEncryption 1 -Type DWord
