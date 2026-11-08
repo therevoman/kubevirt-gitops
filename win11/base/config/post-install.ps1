@@ -65,10 +65,12 @@ foreach ($f in 'cloudbase-init.conf', 'cloudbase-init-unattend.conf') {
 }
 
 # Honor a KubeVirt sysprep disk. Sysprep caches cloudbase-init's Unattend.xml in C:\Windows\Panther,
-# which outranks an answer file on a CD, so a sysprep volume would be ignored. This adds a first
-# specialize command that copies unattend.xml/autounattend.xml from any attached CD over that cache;
-# the oobeSystem pass (local accounts, OOBE settings) then uses the VM's own answer file. Its
-# specialize settings (computer name, time zone) are already past and do not apply.
+# which outranks an answer file on a CD, so a sysprep volume would be ignored. A first specialize
+# command copies unattend.xml/autounattend.xml from any attached CD to C:\Windows\Panther\Unattend\,
+# which outranks the cache when Setup looks for an answer file again at the start of oobeSystem
+# (overwriting the cache itself does not work: Setup rewrites it after specialize). The oobeSystem
+# pass (local accounts, OOBE settings) then uses the VM's answer file; its specialize settings
+# (computer name, time zone) are already past. SetupComplete.cmd deletes the copy (it holds passwords).
 $Scripts = 'C:\Windows\Setup\Scripts'
 New-Item $Scripts -ItemType Directory -Force | Out-Null
 Set-Content -Path "$Scripts\use-sysprep-cd.ps1" -Encoding ASCII -Value @'
@@ -76,10 +78,19 @@ $log = 'C:\Windows\Panther\use-sysprep-cd.log'
 $f = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Root -ne 'C:\' } |
     ForEach-Object { Get-ChildItem $_.Root -File -ErrorAction SilentlyContinue } |
     Where-Object { $_.Name -in 'unattend.xml', 'autounattend.xml' } | Select-Object -First 1
-if ($f) { Copy-Item $f.FullName C:\Windows\Panther\unattend.xml -Force; "copied $($f.FullName)" | Out-File $log }
+if ($f) {
+    New-Item C:\Windows\Panther\Unattend -ItemType Directory -Force | Out-Null
+    Copy-Item $f.FullName C:\Windows\Panther\Unattend\Unattend.xml -Force
+    "copied $($f.FullName) to C:\Windows\Panther\Unattend\Unattend.xml" | Out-File $log
+}
 else { 'no sysprep answer file found' | Out-File $log }
 exit 0
 '@
+# Runs as SYSTEM after setup completes, before the first logon
+Add-Content -Path "$Scripts\SetupComplete.cmd" -Encoding ASCII -Value @(
+    'if exist C:\Windows\Panther\Unattend\Unattend.xml del /f /q C:\Windows\Panther\Unattend\Unattend.xml',
+    'rem OOBE leaves its temporary account behind when an answer file creates the local accounts',
+    'net user defaultuser0 >nul 2>&1 && net user defaultuser0 /delete')
 $UA = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\Unattend.xml'
 $U = 'urn:schemas-microsoft-com:unattend'; $W = 'http://schemas.microsoft.com/WMIConfig/2002/State'
 [xml]$x = Get-Content $UA
