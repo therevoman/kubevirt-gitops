@@ -64,6 +64,40 @@ foreach ($f in 'cloudbase-init.conf', 'cloudbase-init-unattend.conf') {
     Select-String -Path $p -Pattern '^metadata_services'
 }
 
+# Honor a KubeVirt sysprep disk. Sysprep caches cloudbase-init's Unattend.xml in C:\Windows\Panther,
+# which outranks an answer file on a CD, so a sysprep volume would be ignored. This adds a first
+# specialize command that copies unattend.xml/autounattend.xml from any attached CD over that cache;
+# the oobeSystem pass (local accounts, OOBE settings) then uses the VM's own answer file. Its
+# specialize settings (computer name, time zone) are already past and do not apply.
+$Scripts = 'C:\Windows\Setup\Scripts'
+New-Item $Scripts -ItemType Directory -Force | Out-Null
+Set-Content -Path "$Scripts\use-sysprep-cd.ps1" -Encoding ASCII -Value @'
+$log = 'C:\Windows\Panther\use-sysprep-cd.log'
+$f = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Root -ne 'C:\' } |
+    ForEach-Object { Get-ChildItem $_.Root -File -ErrorAction SilentlyContinue } |
+    Where-Object { $_.Name -in 'unattend.xml', 'autounattend.xml' } | Select-Object -First 1
+if ($f) { Copy-Item $f.FullName C:\Windows\Panther\unattend.xml -Force; "copied $($f.FullName)" | Out-File $log }
+else { 'no sysprep answer file found' | Out-File $log }
+exit 0
+'@
+$UA = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\Unattend.xml'
+$U = 'urn:schemas-microsoft-com:unattend'; $W = 'http://schemas.microsoft.com/WMIConfig/2002/State'
+[xml]$x = Get-Content $UA
+$ns = New-Object Xml.XmlNamespaceManager $x.NameTable; $ns.AddNamespace('u', $U)
+$rs = $x.SelectSingleNode("//u:settings[@pass='specialize']/u:component[@name='Microsoft-Windows-Deployment']/u:RunSynchronous", $ns)
+if (-not $rs) { Write-Error 'cloudbase-init Unattend.xml has no specialize RunSynchronous; sysprep disks will be ignored' }
+else {
+    foreach ($o in $rs.SelectNodes('u:RunSynchronousCommand/u:Order', $ns)) { $o.InnerText = [string]([int]$o.InnerText + 1) }
+    $c = $x.CreateElement('RunSynchronousCommand', $U)
+    $a = $x.CreateAttribute('wcm', 'action', $W); $a.Value = 'add'; [void]$c.Attributes.Append($a)
+    foreach ($kv in @(@('Order', '1'), @('Path', "powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Scripts\use-sysprep-cd.ps1"), @('Description', 'Use the answer file from a sysprep disk'))) {
+        $e = $x.CreateElement($kv[0], $U); $e.InnerText = $kv[1]; [void]$c.AppendChild($e)
+    }
+    [void]$rs.PrependChild($c)
+    $x.Save($UA)
+    Select-String -Path $UA -Pattern '<Order>|<Path>' | ForEach-Object { $_.Line.Trim() }
+}
+
 # --- Generalize ----------------------------------------------------------------------------------
 # Reboot so pending servicing completes, then run sysprep from a one-shot SYSTEM startup task.
 # If sysprep fails the VM stays up (see C:\Windows\System32\Sysprep\Panther\setupact.log) and the
