@@ -16,8 +16,13 @@ $ProgressPreference = 'SilentlyContinue'      # Invoke-WebRequest is very slow w
 $Lib = 'C:\Windows\Temp\build-lib.ps1'
 Set-Content -Path $Lib -Encoding ASCII -Value @'
 $BuildStatus = 'C:\Windows\Temp\build-status.txt'
+# install.sh polls this file through qemu-ga, which opens it without write sharing, so a write that
+# lands during a read fails with "being used by another process" (build 9 lost an update round to it).
 function Set-BuildStatus([string]$Status) {
-    Set-Content -Path $BuildStatus -Encoding ASCII -Value "$(Get-Date -Format s) $Status"
+    for ($i = 1; ; $i++) {
+        try { Set-Content -Path $BuildStatus -Encoding ASCII -Value "$(Get-Date -Format s) $Status" -ErrorAction Stop; break }
+        catch [System.IO.IOException] { if ($i -ge 20) { throw }; Start-Sleep -Milliseconds 500 }
+    }
     Write-Output "BUILD STATUS: $Status"
 }
 function Set-BuildFailed([string]$Stage, $Err) {
@@ -249,6 +254,7 @@ Start-Sleep -Seconds 60                       # let services settle after boot
 
 # Windows Update rounds. Drivers and feature upgrades are excluded (virtio drivers come from
 # virtio-win; the image stays on the ISO's release). A transient error reboots into another round.
+# A clean run needs about 4 rounds (cumulative update, then the Defender platform, then a check).
 $MaxRounds = 8
 $RoundFile = 'C:\Windows\Temp\build-wu-round.txt'
 $round = 1 + [int](Get-Content $RoundFile -ErrorAction SilentlyContinue)
@@ -273,11 +279,22 @@ for ($i = 1; -not (Get-Module -ListAvailable PSWindowsUpdate); $i++) {
 Import-Module PSWindowsUpdate
 # The same error in two rounds in a row is not transient: fail instead of rebooting again.
 $ErrFile = 'C:\Windows\Temp\build-wu-lasterror.txt'
+$OfferFile = 'C:\Windows\Temp\build-wu-lastoffer.txt'
 $retry = $false
+$stuck = $null
 try {
-    $wu = @{ NotCategory = 'Drivers', 'Upgrades'; NotTitle = 'Preview' }
+    # UpdateType Software is what excludes drivers: NotCategory Drivers alone still let a driver
+    # (Microsoft AudioProcessingObject Driver Update) through, offered and not installed every round
+    # until build 9 ran out of rounds.
+    $wu = @{ UpdateType = 'Software'; NotCategory = 'Drivers', 'Upgrades'; NotTitle = 'Preview' }
     $updates = @(Get-WindowsUpdate @wu)
-    if ($updates.Count -gt 0) {
+    # The same set offered two rounds in a row means an update that never installs: fail with its name
+    $offer = ($updates | ForEach-Object { "$($_.Identity.UpdateID)" } | Sort-Object) -join ','
+    if ($updates.Count -gt 0 -and $offer -eq (Get-Content $OfferFile -Raw -ErrorAction SilentlyContinue)) {
+        $stuck = "Windows Update offers the same updates again after installing them: $(($updates | ForEach-Object { "$($_.KB) $($_.Title)".Trim() }) -join '; ')"
+    }
+    elseif ($updates.Count -gt 0) {
+        Set-Content $OfferFile $offer -NoNewline
         Set-BuildStatus "windows update round $($round): installing $($updates.Count) updates"
         Install-WindowsUpdate @wu -AcceptAll -IgnoreReboot | Format-Table -AutoSize | Out-String -Width 200
         $retry = $true
@@ -291,6 +308,7 @@ catch {
     Set-Content $ErrFile $msg -NoNewline
     $retry = $true
 }
+if ($stuck) { throw $stuck }
 if ($retry) { Stop-Transcript; Restart-Computer -Force; exit 0 }
 
 Set-BuildStatus 'preparing sysprep'
