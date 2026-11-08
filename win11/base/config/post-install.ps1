@@ -92,10 +92,13 @@ if ($bl -and $bl.VolumeStatus -ne 'FullyDecrypted') {
 }
 
 # cloudbase-init (cloud-init for Windows; used by the template's cloud-init/sysprep volumes).
-# Pinned: the "Stable" link moves between releases. To upgrade, change both lines.
+# Pinned to a GitHub release (the cloudbase.it "Stable" link moves between releases and lags GitHub;
+# both serve identical MSIs). To upgrade, change both lines. 1.1.9 over 1.1.8: NoCloud accepts
+# public-keys as a dict of strings, config drive locations are searched in a fixed order (CD-ROM first),
+# and the bundled cryptography/urllib3/requests/oauthlib are updated.
 Set-BuildStatus 'installing cloudbase-init'
-$CbiUrl = 'https://www.cloudbase.it/downloads/CloudbaseInitSetup_1_1_8_x64.msi'
-$CbiSha256 = '0e7fa42e0cbc0ce7657f85730b0c6cc7afc4087a3639df0ff51a721a0be19bd5'
+$CbiUrl = 'https://github.com/cloudbase/cloudbase-init/releases/download/1.1.9/CloudbaseInitSetup_1_1_9_x64.msi'
+$CbiSha256 = 'ffbf80515a7311ed00800276a6af7aab23b41d7acf13e79ce3d2d56844f638f7'
 $Cloudinit = Join-Path $BasePath 'CloudbaseInitSetup_x64.msi'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Invoke-WebRequest -UseBasicParsing $CbiUrl -OutFile $Cloudinit
