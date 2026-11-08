@@ -92,8 +92,10 @@
         <OSImage>
           <InstallFrom>
             <MetaData wcm:action="add">
-              <Key>/IMAGE/NAME</Key>
-              <Value>Windows Server 2022 Standard Evaluation (Desktop Experience)</Value>
+              <!-- By index: a /IMAGE/NAME mismatch shows the edition picker, and the build's Enter
+                   keys then pick index 1 (Server Core). 2 = Standard (Desktop Experience). -->
+              <Key>/IMAGE/INDEX</Key>
+              <Value>2</Value>
             </MetaData>
           </InstallFrom>
           <InstallTo>
@@ -161,26 +163,7 @@
         <Username>Administrator</Username>
       </AutoLogon>
 
-      <OOBE>
-        <HideEULAPage>true</HideEULAPage>
-        <HideLocalAccountScreen>true</HideLocalAccountScreen>
-        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
-        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
-        <NetworkLocation>Work</NetworkLocation>
-        <ProtectYourPC>3</ProtectYourPC>
-        <SkipMachineOOBE>true</SkipMachineOOBE>
-      </OOBE>
 
-      <UserAccounts>
-        <LocalAccounts>
-          <LocalAccount wcm:action="add">
-            <Description>Local Administrator Account</Description>
-            <DisplayName>Administrator</DisplayName>
-            <Group>Administrators</Group>
-            <Name>Administrator</Name>
-          </LocalAccount>
-        </LocalAccounts>
-      </UserAccounts>
 
       <TimeZone>Mountain Standard Time</TimeZone>
     </component>
@@ -233,14 +216,10 @@
       </OOBE>
 
       <UserAccounts>
-        <LocalAccounts>
-          <LocalAccount wcm:action="add">
-            <Description>Local Administrator Account</Description>
-            <DisplayName>Administrator</DisplayName>
-            <Group>Administrators</Group>
-            <Name>Administrator</Name>
-          </LocalAccount>
-        </LocalAccounts>
+        <AdministratorPassword>
+          <Value>R3dh4t1!</Value>
+          <PlainText>true</PlainText>
+        </AdministratorPassword>
       </UserAccounts>
 
       <TimeZone>Mountain Standard Time</TimeZone>
