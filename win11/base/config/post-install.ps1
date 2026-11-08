@@ -47,9 +47,21 @@ function Remove-UserOnlyAppx {
 trap { Set-BuildFailed 'post-install' $_; Stop-Transcript; exit 1 }
 Set-BuildStatus 'post-install started'
 
-function Install-Msi([string]$Msi) {
-    $p = Start-Process msiexec.exe -Wait -PassThru -ArgumentList "/i `"$Msi`" /qn /norestart"
-    if ($p.ExitCode -notin 0, 3010) { throw "msiexec $Msi failed with exit code $($p.ExitCode)" }
+# Retries, because an install at first logon can fail transiently: build 7 had qemu-ga-x86_64.msi fail
+# with 1603 (error 1722, RegisterCom of qga-vss.dll) seconds after virtio-win-gt, and the same MSI
+# installed cleanly when rerun a few minutes later. Each attempt writes a verbose log; the last
+# attempt's error lines go into the failure message.
+function Install-Msi([string]$Msi, [int]$Attempts = 4, [int]$DelaySec = 45) {
+    $log = "C:\Windows\Temp\msi-$([IO.Path]::GetFileNameWithoutExtension($Msi)).log"
+    for ($i = 1; $i -le $Attempts; $i++) {
+        $p = Start-Process msiexec.exe -Wait -PassThru -ArgumentList "/i `"$Msi`" /qn /norestart /l*v `"$log`""
+        if ($p.ExitCode -in 0, 3010) { Write-Output "msiexec $Msi exit code $($p.ExitCode) (attempt $i)"; return }
+        Write-Warning "msiexec $Msi failed with exit code $($p.ExitCode) (attempt $i of $Attempts)"
+        if ($i -lt $Attempts) { Start-Sleep $DelaySec }
+    }
+    $err = (Select-String -Path $log -Pattern 'Error \d{4}\.|return value 3' -ErrorAction SilentlyContinue |
+        Select-Object -First 2 | ForEach-Object { $_.Line.Trim() }) -join ' | '
+    throw "msiexec $Msi failed with exit code $($p.ExitCode) after $Attempts attempts; log ${log}: $err"
 }
 
 # Keep Windows Update from staging servicing work in the background during the build; pending
@@ -85,6 +97,8 @@ catch { Write-Warning "Could not add the Red Hat publisher certificate (continui
 # failure before this point only shows up as its "no status from the guest" timeout.
 Set-BuildStatus 'installing virtio-win guest tools and the QEMU guest agent'
 Install-Msi (Join-Path $Virtio 'virtio-win-gt-x64.msi')
+# qga-vss registers a COM+ component; make sure the COM+ and VSS services are up first
+Start-Service COMSysApp, VSS -ErrorAction SilentlyContinue
 Install-Msi (Join-Path $Virtio 'guest-agent\qemu-ga-x86_64.msi')
 Assert-VirtioStorageDrivers
 
