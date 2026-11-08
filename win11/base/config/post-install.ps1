@@ -314,6 +314,14 @@ if ($retry) { Stop-Transcript; Restart-Computer -Force; exit 0 }
 Set-BuildStatus 'preparing sysprep'
 Unregister-ScheduledTask -TaskName BootSourceSysprep -Confirm:$false
 Assert-VirtioStorageDrivers
+# Clones grow C: at first boot (SetupComplete), which only works while C: is the last partition. Setup
+# or a WinRE servicing update can append a recovery partition after it (autounattend.xml creates one
+# before C: to prevent that).
+$osPart = Get-Partition -DriveLetter C
+$after = @(Get-Partition -DiskNumber $osPart.DiskNumber | Where-Object Offset -gt $osPart.Offset)
+if ($after) { throw "partition(s) after C: ($(($after | ForEach-Object { "#$($_.PartitionNumber) $($_.Type)" }) -join ', ')); clones could not grow C:" }
+Write-Output 'C: is the last partition'
+reagentc.exe /info | Select-String 'Windows RE status|Windows RE location' | ForEach-Object { $_.Line.Trim() }
 # Auto-logon was only for the build; don't leave it (or its password) in the image
 $WL = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
 Set-ItemProperty $WL AutoAdminLogon '0'

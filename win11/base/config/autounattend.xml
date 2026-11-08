@@ -32,8 +32,17 @@
                             <Type>MSR</Type>
                             <Size>16</Size>
                         </CreatePartition>
+                        <!-- WinRE gets its own partition here, BEFORE C:. Without one, 24H2 Setup shrinks C: and
+                             appends a recovery partition after it, which blocks the clone's SetupComplete
+                             Resize-Partition (and cloudbase-init ExtendVolumes): build 10 clones on 80 GiB disks
+                             kept a 62.8 GB C:. C: must stay the last partition; stage 2 checks that. -->
                         <CreatePartition wcm:action="add">
                             <Order>3</Order>
+                            <Type>Primary</Type>
+                            <Size>1024</Size>
+                        </CreatePartition>
+                        <CreatePartition wcm:action="add">
+                            <Order>4</Order>
                             <Type>Primary</Type>
                             <Extend>true</Extend>
                         </CreatePartition>
@@ -52,6 +61,13 @@
                         <ModifyPartition wcm:action="add">
                             <Order>3</Order>
                             <PartitionID>3</PartitionID>
+                            <Label>WinRE</Label>
+                            <Format>NTFS</Format>
+                            <TypeID>DE94BBA4-06D1-4D40-A16A-BFD50179D6AC</TypeID>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                            <Order>4</Order>
+                            <PartitionID>4</PartitionID>
                             <Label>OS</Label>
                             <Letter>C</Letter>
                             <Format>NTFS</Format>
@@ -69,7 +85,7 @@
                     </InstallFrom>
                     <InstallTo>
                         <DiskID>0</DiskID>
-                        <PartitionID>3</PartitionID>
+                        <PartitionID>4</PartitionID>
                     </InstallTo>
                 </OSImage>
             </ImageInstall>
