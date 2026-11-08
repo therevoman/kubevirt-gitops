@@ -53,6 +53,17 @@ Get-AppxPackage | Where-Object { -not $_.NonRemovable -and -not $_.IsFramework -
 
 Remove-Item $BasePath -Recurse -Force
 
+# cloudbase-init: only probe the metadata sources KubeVirt provides (config drive / NoCloud CD).
+# The default list also polls the OpenStack/EC2/MAAS endpoints at 169.254.169.254, which adds 10-20+
+# minutes of timeouts to every VM's first boot ("Getting ready" / "Still working on a few things").
+$CbiConf = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf'
+foreach ($f in 'cloudbase-init.conf', 'cloudbase-init-unattend.conf') {
+    $p = Join-Path $CbiConf $f
+    (Get-Content $p) -replace '^metadata_services=.*', 'metadata_services=cloudbaseinit.metadata.services.configdrive.ConfigDriveService,cloudbaseinit.metadata.services.nocloudservice.NoCloudConfigDriveService' |
+        Set-Content $p -Encoding ASCII
+    Select-String -Path $p -Pattern '^metadata_services'
+}
+
 # --- Generalize ----------------------------------------------------------------------------------
 # Reboot so pending servicing completes, then run sysprep from a one-shot SYSTEM startup task.
 # If sysprep fails the VM stays up (see C:\Windows\System32\Sysprep\Panther\setupact.log) and the
