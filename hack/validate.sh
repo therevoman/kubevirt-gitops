@@ -77,11 +77,14 @@ for env in win*/base/os.env; do
   bash -c "set -u; set -a; source <(grep -v '^#' '$env' | sed -E 's/^([A-Z_]+)=(.*)\$/\\1=\"\\2\"/'); set +a
     NAME=windows-\$OS-install; ISO_DV=\$BOOT_SOURCE-install-iso; CD_SECRET=\$NAME-cd
     VIRTIO_WIN_IMAGE=registry.example/virtio-win:test; BUILD_NAMESPACE=kubevirt-gitops
+    VERIFY_NAME=windows-\$OS-verify; VERIFY_SECRET=\$VERIFY_NAME-userdata
+    VERIFY_SOURCE_NS=kubevirt-gitops; VERIFY_SOURCE_PVC=\$NAME-rootdisk
     PRODUCT_KEY=\${PRODUCT_KEY:-}; WU_MAX_ROUNDS=\${WU_MAX_ROUNDS:-8}
     [ \"\$BOOT_SOURCE\" = '$o' ] || { echo \"BOOT_SOURCE \$BOOT_SOURCE does not match directory $o\"; exit 1; }
     source '$TMP/fns.sh'; check_params
     render $B/autounattend.xml '$TMP/$o/autounattend.xml'
     render $B/windows-install-vm.yaml '$TMP/$o/vm.yaml'
+    render $B/windows-verify-vm.yaml '$TMP/$o/verify-vm.yaml'
     render $B/clone-boot-source.yaml '$TMP/$o/clone.yaml'" || { err "$o: rendering failed"; continue; }
   python3 - "$TMP/$o" "$o" <<'PY' || err "$o: rendered templates are invalid"
 import sys, yaml, xml.etree.ElementTree as ET
@@ -90,7 +93,11 @@ ns = {'u': 'urn:schemas-microsoft-com:unattend'}
 x = ET.parse(f'{d}/autounattend.xml').getroot()
 md = x.find('.//u:ImageInstall//u:MetaData', ns)
 vm = yaml.safe_load(open(f'{d}/vm.yaml')); cl = yaml.safe_load(open(f'{d}/clone.yaml'))
-assert vm['kind'] == 'VirtualMachine' and cl['kind'] == 'DataVolume'
+ck = yaml.safe_load(open(f'{d}/verify-vm.yaml'))
+assert vm['kind'] == 'VirtualMachine' and cl['kind'] == 'DataVolume' and ck['kind'] == 'VirtualMachine'
+# The check VM must match the build VM's TPM (Windows 11 will not boot without it)
+assert ('tpm' in vm['spec']['template']['spec']['domain']['devices']) == \
+       ('tpm' in ck['spec']['template']['spec']['domain']['devices']), 'TPM differs between build and check VM'
 assert cl['metadata']['name'] == o, cl['metadata']['name']
 nic = vm['spec']['template']['spec']['domain']['devices']['interfaces'][0]['model']
 print(f"{o}: {md.find('u:Key', ns).text}={md.find('u:Value', ns).text}, VM {vm['metadata']['name']}, NIC {nic}, boot source {o}")
