@@ -30,6 +30,14 @@ while read -r k; do
 done < <(git ls-files --cached --others --exclude-standard '*kustomization.yaml' | sort)
 echo "$n kustomizations built"
 
+echo "== Argo CD health checks (gitopsservice/health)"
+$KUSTOMIZE gitopsservice/health >"$TMP/health.yaml" 2>/dev/null || err "gitopsservice/health does not build"
+grep -q 'FROM-LUA-FILE' "$TMP/health.yaml" && err "gitopsservice/health: a check was not filled from its .lua file"
+echo "$(grep -c '^  - check:' "$TMP/health.yaml") checks"
+if command -v luac >/dev/null; then
+  for l in gitopsservice/health/*.lua; do luac -p "$l" || err "$l: Lua syntax"; done
+else echo "luac not installed; Lua syntax not checked"; fi
+
 echo "== Argo CD paths"
 python3 - <<'PY' || fail=1
 import glob, subprocess, sys, yaml, os

@@ -1,0 +1,34 @@
+# Argo CD health checks for KubeVirt kinds, as configuration of the OpenShift GitOps operator
+# (ArgoCD openshift-gitops, spec.resourceHealthChecks). Apply with: oc apply -k gitopsservice/health
+# This sets the whole resourceHealthChecks list of that ArgoCD instance.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- argocd-health-checks.yaml
+# The Lua sources, only to fill the checks in (local-config: not applied)
+configMapGenerator:
+- name: argocd-health-lua
+  files:
+  - HyperConverged=hyperconverged.lua
+  - DataSource=datasource.lua
+  - VirtualMachinePool=virtualmachinepool.lua
+  options:
+    disableNameSuffixHash: true
+    annotations:
+      config.kubernetes.io/local-config: "true"
+replacements:
+- source: {kind: ConfigMap, name: argocd-health-lua, fieldPath: data.HyperConverged}
+  targets:
+  - select: {kind: ArgoCD}
+    fieldPaths:
+    - spec.resourceHealthChecks.[kind=HyperConverged].check
+- source: {kind: ConfigMap, name: argocd-health-lua, fieldPath: data.DataSource}
+  targets:
+  - select: {kind: ArgoCD}
+    fieldPaths:
+    - spec.resourceHealthChecks.[kind=DataSource].check
+- source: {kind: ConfigMap, name: argocd-health-lua, fieldPath: data.VirtualMachinePool}
+  targets:
+  - select: {kind: ArgoCD}
+    fieldPaths:
+    - spec.resourceHealthChecks.[kind=VirtualMachinePool].check
