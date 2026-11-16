@@ -1,7 +1,9 @@
+# Clone into the os-images namespace (install.sh, clone): the build disk to <BOOT_SOURCE>-<YYYY-MM>,
+# then that build to <BOOT_SOURCE>, the PVC the DataSource points at.
 apiVersion: cdi.kubevirt.io/v1beta1
 kind: DataVolume
 metadata:
-  name: @BOOT_SOURCE@
+  name: @TARGET_DV@
   namespace: openshift-virtualization-os-images
   annotations:
     cdi.kubevirt.io/storage.bind.immediate.requested: "true"
@@ -9,8 +11,8 @@ metadata:
 spec:
   source:
     pvc:
-      namespace: @BUILD_NAMESPACE@
-      name: @NAME@-rootdisk
+      namespace: @SOURCE_NS@
+      name: @SOURCE_PVC@
   # No accessModes/volumeMode: the StorageProfile picks them (RWX Block on ODF, RWO on LVMS).
   storage:
     resources:

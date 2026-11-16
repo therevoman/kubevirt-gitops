@@ -13,10 +13,17 @@ configMapGenerator:
 components:
 - ../../windows/build
 # Server 2016 cumulative updates are slow and need more rounds: allow 10h instead of 6h
+# (the build Job and the monthly rebuild CronJob)
 patches:
 - target:
     kind: Job
   patch: |-
     - op: replace
       path: /spec/activeDeadlineSeconds
+      value: 36000
+- target:
+    kind: CronJob
+  patch: |-
+    - op: replace
+      path: /spec/jobTemplate/spec/activeDeadlineSeconds
       value: 36000
