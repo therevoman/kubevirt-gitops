@@ -76,7 +76,8 @@ for env in win*/base/os.env; do
   o=${env%%/*}; mkdir -p "$TMP/$o"
   bash -c "set -u; set -a; source <(grep -v '^#' '$env' | sed -E 's/^([A-Z_]+)=(.*)\$/\\1=\"\\2\"/'); set +a
     NAME=windows-\$OS-install; ISO_DV=\$BOOT_SOURCE-install-iso; CD_SECRET=\$NAME-cd
-    VIRTIO_WIN_IMAGE=registry.example/virtio-win:test; BUILD_NAMESPACE=kubevirt-gitops
+    VIRTIO_WIN_IMAGE=registry.example/virtio-win:test
+    TARGET_DV=\$BOOT_SOURCE; SOURCE_NS=openshift-virtualization-os-images; SOURCE_PVC=\$BOOT_SOURCE-2026-12
     VERIFY_NAME=windows-\$OS-verify; VERIFY_SECRET=\$VERIFY_NAME-userdata
     VERIFY_SOURCE_NS=kubevirt-gitops; VERIFY_SOURCE_PVC=\$NAME-rootdisk
     PRODUCT_KEY=\${PRODUCT_KEY:-}; WU_MAX_ROUNDS=\${WU_MAX_ROUNDS:-8}

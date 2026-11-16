@@ -5,6 +5,7 @@ metadata:
   namespace: kubevirt-gitops
   annotations:
     # Under Argo CD this runs after every sync; install.sh exits at once if the boot source exists.
+    # The monthly CronJob windows-OS-rebuild runs this same pod template (windows-rebuild-cronjob.yaml).
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
@@ -24,6 +25,11 @@ spec:
         envFrom:
         - configMapRef:
             name: windows-OS-install-params
+        env:
+        - name: JOB_NAME                # windows-<OS>-install, or windows-<OS>-rebuild-<n> from the CronJob
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['job-name']
         volumeMounts:
         - name: scripts
           mountPath: /scripts

@@ -165,9 +165,19 @@ The plan, in order:
   - [ ] Not yet run on a cluster. The check VM boots on SATA like the build VM; the
     `#ps1_sysnative` user data relies on cloudbase-init's UserDataPlugin and the NoCloud service,
     which post-install enables.
-- [ ] **E2 Monthly patched images.** Build into dated PVCs (`win11-2026-12`) and switch the
-  DataSource when E1 passes, via a CronJob or a scheduled sync. Today a boot source is never
-  rebuilt once its PVC exists.
+- [x] **E2 Monthly patched images.** CronJob `windows-<OS>-rebuild` (in `windows/build`) runs
+  the Job's pod template on `REBUILD_SCHEDULE` from `os.env`: one day per version, the 15th to
+  the 20th, after Patch Tuesday. Every build (Job or CronJob) is stored as
+  `<boot source>-<YYYY-MM>`, checked (E1), then cloned to `<boot source>`. The newest
+  `KEEP_BUILDS` (2) dated builds are kept for rollback (`windows/build/README.md`).
+  - Design choice: the DataSource is not re-pointed at the dated PVC, because SSP owns the
+    Windows DataSources and would likely revert the change. Publishing replaces the
+    `<boot source>` PVC instead, so new template clones wait during that clone.
+  - The CronJob is suspended by default. A cluster turns it on with the commented patch in
+    `clusters/<cluster>/windows/kustomization.yaml`.
+  - New RBAC: Role `windows-<OS>-install-image-publish` in `openshift-virtualization-os-images`
+    (delete and label PVCs, delete DataVolumes).
+  - [ ] Not yet run on a cluster.
 - [ ] **E3 Argo CD health.** Move the Lua health checks in `setup/` into the GitOps operator
   config, so DataVolumes, VMs and build Jobs report real health.
 - [ ] **E4 Example VMs per Windows version.** Clone the DataSource with a sysprep or

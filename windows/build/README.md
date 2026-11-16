@@ -35,6 +35,8 @@ ConfigMap through `envFrom`.
 | `AGENT_TIMEOUT_MIN` | `60` (default) | VM start to first status from the guest |
 | `VERIFY` | `true` (default) | Check the image on a throwaway clone before publishing it (see below) |
 | `VERIFY_TIMEOUT_MIN` | `30` (default) | Time the check clone has to boot and run cloudbase-init |
+| `REBUILD_SCHEDULE` | `0 1 20 * *` | Cron schedule (UTC) of the monthly rebuild; one day per version, after Patch Tuesday |
+| `KEEP_BUILDS` | `2` (default) | Dated builds kept in `openshift-virtualization-os-images` |
 
 ## Image check before publishing
 
@@ -46,6 +48,59 @@ the guest agent and cloudbase-init all work. Only then is the disk cloned to the
 
 On a failure the Job exits non-zero and prints the tail of the cloudbase-init log. The check VM
 is left for debugging, and the boot source is not touched. The next build replaces the check VM.
+
+## Builds, monthly rebuilds and rollback
+
+Every build ends the same way:
+
+1. The image check above passes.
+2. The disk is cloned to `<BOOT_SOURCE>-<YYYY-MM>` in `openshift-virtualization-os-images`,
+   labelled `kubevirt-gitops/boot-source=<BOOT_SOURCE>`. The build VM is deleted.
+3. That build is cloned to `<BOOT_SOURCE>`, the PVC the DataSource points at. A previous
+   `<BOOT_SOURCE>` is deleted first, so new VMs from the templates wait until the clone finishes
+   (minutes with CSI clones). Running VMs have their own disks and are not affected. The
+   DataSource itself is never edited: SSP owns it.
+4. Dated builds past the newest `KEEP_BUILDS` are deleted.
+
+Two things start a build:
+
+- **Job `windows-<OS>-install`** (Argo CD PostSync hook, or `oc apply -k`): the first build. It
+  exits at once if `<BOOT_SOURCE>` exists.
+- **CronJob `windows-<OS>-rebuild`**: a fresh build with that month's updates, on
+  `REBUILD_SCHEDULE`. It runs the Job's pod template (copied by the Component's replacements)
+  and exits at once if this month's build exists. It is **suspended by default**. Turn it on
+  for a cluster with the commented patch in `clusters/<cluster>/windows/kustomization.yaml`.
+  To run one now:
+  `oc create job --from=cronjob/windows-11-rebuild windows-11-rebuild-now -n kubevirt-gitops`
+  (the Job name must contain `-rebuild-`).
+
+Both refuse to start while the build VM `windows-<OS>-install` exists, that is while a build
+runs, or after a failed one was left for debugging.
+
+### Roll back
+
+List the builds, then publish an older one under the boot-source name:
+
+```
+oc get pvc -n openshift-virtualization-os-images -l kubevirt-gitops/boot-source=win11
+oc delete dv,pvc win11 -n openshift-virtualization-os-images --ignore-not-found
+cat <<'EOF' | oc apply -f -
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: win11
+  namespace: openshift-virtualization-os-images
+spec:
+  source:
+    pvc: {namespace: openshift-virtualization-os-images, name: win11-2026-11}
+  storage:
+    resources:
+      requests:
+        storage: 64Gi
+EOF
+```
+
+The next monthly rebuild publishes a new build again; suspend the CronJob to stay on the old one.
 
 ## Templates
 

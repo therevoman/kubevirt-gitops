@@ -64,9 +64,11 @@ parameters:
 ```
 windows/build/                  # Kustomize Component, shared by every version
   windows-install-{sa,rbac,job}.yaml
+  windows-rebuild-cronjob.yaml  # monthly rebuild (suspended unless the cluster turns it on)
   config/                       # -> ConfigMap windows-<OS>-install-scripts
-    install.sh                  #    Job: create VM, start it, follow the build, clone to the boot source
+    install.sh                  #    build, check, store, publish (Job and CronJob)
     windows-install-vm.yaml     #    build VM template (@PLACEHOLDERS@ filled from os.env)
+    windows-verify-vm.yaml      #    throwaway clone that checks the image before it is published
     clone-boot-source.yaml      #    DataVolume into openshift-virtualization-os-images
     autounattend.xml            #    unattended install; desktop/server and product-key blocks
     post-install.ps1            #    virtio-win, guest agent, cloudbase-init, Windows Update, sysprep
@@ -102,6 +104,11 @@ What every build does:
   - WinRE sits before C:, so clones grow C: at first boot.
   - cloudbase-init (pinned and hash-checked) only reads the config drive / NoCloud sources.
   - A KubeVirt sysprep disk is honored.
+- **Checked before publishing.** A throwaway clone of the new disk must boot and run
+  cloudbase-init user data (read back through the guest agent) before the boot source changes.
+- **Dated builds.** Each build is stored as `<boot source>-<YYYY-MM>` (the newest `KEEP_BUILDS`,
+  default 2, are kept for rollback) and then cloned to `<boot source>`, the PVC the DataSource
+  serves.
 
 Cluster differences are kept out of the base:
 
@@ -115,8 +122,9 @@ Cluster differences are kept out of the base:
   `winXX/overlays/<cluster>` includes. Change a cluster's ISO server in that one file.
 
 The build runs in namespace `kubevirt-gitops` and takes 30-90 minutes or more (most of it Windows Update;
-Server 2016 is the slowest). `install.sh` exits at once if the boot-source PVC already exists;
-delete that PVC to rebuild.
+Server 2016 is the slowest). The Job exits at once if the boot-source PVC already exists.
+Monthly patched images come from CronJob `windows-<OS>-rebuild`, which a cluster turns on in
+`clusters/<cluster>/windows/kustomization.yaml`; see [windows/build](windows/build/README.md).
 
 Run one directly:
 
