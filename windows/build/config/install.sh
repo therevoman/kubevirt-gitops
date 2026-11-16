@@ -66,7 +66,8 @@ oc wait dv/$ISO_DV -n $NS --for=condition=Ready --timeout=3600s || { log "ISO im
 curl -sfk http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz -o /tmp/virtctl.tar.gz \
   && tar -xzf /tmp/virtctl.tar.gz -C /tmp/ || { log "virtctl download failed"; exit 1; }
 
-# virtio-win image matching this CNV release (falls back to a release tag if the CM is not readable)
+# virtio-win image matching this CNV release. The fallback (when the CM is not readable) is pinned to
+# the same minor release as the Job's ose-cli image; bump them together.
 VIRTIO_WIN_IMAGE=$(oc get cm virtio-win -n openshift-cnv -o jsonpath='{.data.virtio-win-image}' 2>/dev/null)
 VIRTIO_WIN_IMAGE=${VIRTIO_WIN_IMAGE:-registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.22}
 log "virtio-win image: $VIRTIO_WIN_IMAGE"
