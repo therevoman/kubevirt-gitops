@@ -1,7 +1,7 @@
 apiVersion: cdi.kubevirt.io/v1beta1
 kind: DataVolume
 metadata:
-  name: win11
+  name: @BOOT_SOURCE@
   namespace: openshift-virtualization-os-images
   annotations:
     cdi.kubevirt.io/storage.bind.immediate.requested: "true"
@@ -9,10 +9,10 @@ metadata:
 spec:
   source:
     pvc:
-      namespace: BUILD_NAMESPACE        # replaced by install.sh
-      name: windows-11-install-rootdisk
+      namespace: @BUILD_NAMESPACE@
+      name: @NAME@-rootdisk
   # No accessModes/volumeMode: the StorageProfile picks them (RWX Block on ODF, RWO on LVMS).
   storage:
     resources:
       requests:
-        storage: 64Gi               # the win11 templates clone this size; must not exceed it
+        storage: @DISK_SIZE@        # the templates clone this size; must not exceed it

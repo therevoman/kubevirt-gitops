@@ -1,4 +1,4 @@
-# Windows 11 boot-source post-install (adapted from kubevirt-gitops/win2k22).
+# Windows boot-source post-install, shared by every version (windows/build).
 # Stage 1 (this script, FirstLogonCommands): virtio-win guest tools, QEMU guest agent, cloudbase-init,
 # clone first-boot hooks. Stage 2 (sysprep-stage2.ps1, SYSTEM startup task): Windows Update rounds
 # with a reboot between them, pre-sysprep checks and cleanup, then sysprep /generalize /shutdown.
@@ -8,6 +8,10 @@
 # which install.sh reads through the guest agent; a line starting "FAILED" ends the Job with an error
 # (the VM is left running for debugging).
 # Logs: C:\Windows\Temp\post-install.log, sysprep: C:\Windows\System32\Sysprep\Panther\setupact.log
+#
+# Per-version parameters come from build-params.ps1 next to this script (written by install.sh from
+# winXX/base/os.env): $DriverDir (virtio-win driver folder: w10, w11, 2k16 ... 2k25),
+# $Edition (desktop or server), $WuMaxRounds.
 Start-Transcript -Path C:\Windows\Temp\post-install.log -Append
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'      # Invoke-WebRequest is very slow with a progress bar
@@ -30,13 +34,13 @@ function Set-BuildFailed([string]$Stage, $Err) {
     Set-BuildStatus "FAILED $Stage line $($Err.InvocationInfo.ScriptLineNumber): $msg"
 }
 # Clones boot on virtio-blk / virtio-scsi; the image is built on SATA, so it boots in a clone only if
-# these drivers are in the driver store.
-function Assert-VirtioStorageDrivers {
+# viostor/vioscsi are in the driver store. netkvm is the virtio NIC driver (build VM and clones).
+function Assert-VirtioDrivers {
     $inf = (Get-WindowsDriver -Online).OriginalFileName | ForEach-Object { Split-Path $_ -Leaf }
-    foreach ($d in 'viostor.inf', 'vioscsi.inf') {
-        if ($inf -notcontains $d) { throw "$d is not in the driver store; clones on virtio disks would not boot" }
+    foreach ($d in 'viostor.inf', 'vioscsi.inf', 'netkvm.inf') {
+        if ($inf -notcontains $d) { throw "$d is not in the driver store; clones on virtio devices would not work" }
     }
-    Write-Output 'viostor.inf and vioscsi.inf are in the driver store'
+    Write-Output 'viostor.inf, vioscsi.inf and netkvm.inf are in the driver store'
 }
 # Sysprep fails on Appx packages installed for a user but not provisioned for all users
 function Remove-UserOnlyAppx {
@@ -50,7 +54,15 @@ function Remove-UserOnlyAppx {
 '@
 . $Lib
 trap { Set-BuildFailed 'post-install' $_; Stop-Transcript; exit 1 }
-Set-BuildStatus 'post-install started'
+
+$Params = Join-Path $PSScriptRoot 'build-params.ps1'
+if (-not (Test-Path $Params)) { throw "build parameters $Params not found" }
+. $Params
+foreach ($v in 'DriverDir', 'Edition', 'WuMaxRounds') {
+    if (-not (Get-Variable $v -ValueOnly -ErrorAction SilentlyContinue)) { throw "build parameter `$$v is not set" }
+}
+Copy-Item $Params C:\Windows\Temp\build-params.ps1 -Force      # stage 2 reads it after the CD is gone
+Set-BuildStatus "post-install started ($Edition, virtio-win drivers $DriverDir)"
 
 # Retries, because an install at first logon can fail transiently: build 7 had qemu-ga-x86_64.msi fail
 # with 1603 (error 1722, RegisterCom of qga-vss.dll) seconds after virtio-win-gt, and the same MSI
@@ -88,7 +100,7 @@ Write-Output "virtio-win drive: $Virtio"
 $BasePath = 'C:\Windows\Temp\Install'
 New-Item $BasePath -ItemType Directory -Force | Out-Null
 try {
-    $Cert = (Get-AuthenticodeSignature (Join-Path $Virtio 'Balloon\w11\amd64\balloon.sys')).SignerCertificate
+    $Cert = (Get-AuthenticodeSignature (Join-Path $Virtio "Balloon\$DriverDir\amd64\balloon.sys")).SignerCertificate
     $CertFile = Join-Path $BasePath 'redhat.cer'
     [System.IO.File]::WriteAllBytes($CertFile, $Cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
     certutil.exe -f -addstore TrustedPublisher $CertFile | Out-Null
@@ -97,26 +109,49 @@ try {
 }
 catch { Write-Warning "Could not add the Red Hat publisher certificate (continuing): $_" }
 
-# virtio drivers + guest tools (including the virtio-serial driver the guest agent talks over), then the
-# QEMU guest agent. These come first: install.sh can only see build-status.txt once the agent runs, so a
-# failure before this point only shows up as its "no status from the guest" timeout.
+# virtio drivers + guest tools (including the virtio-serial driver the guest agent talks over, and NetKVM
+# for the virtio NIC), then the QEMU guest agent. These come first: install.sh can only see
+# build-status.txt once the agent runs, so a failure before this point only shows up as its "no status
+# from the guest" timeout. The build VM's NIC is virtio, which Windows has no inbox driver for: the
+# guest is offline until virtio-win-gt installs NetKVM, so nothing before this point may need the network.
 Set-BuildStatus 'installing virtio-win guest tools and the QEMU guest agent'
 Install-Msi (Join-Path $Virtio 'virtio-win-gt-x64.msi')
 # qga-vss registers a COM+ component; make sure the COM+ and VSS services are up first
 Start-Service COMSysApp, VSS -ErrorAction SilentlyContinue
 Install-Msi (Join-Path $Virtio 'guest-agent\qemu-ga-x86_64.msi')
-Assert-VirtioStorageDrivers
+Assert-VirtioDrivers
+
+# The virtio NIC comes up once NetKVM is installed; wait for DHCP and DNS before the first download
+Set-BuildStatus 'waiting for the network (virtio NIC)'
+$deadline = (Get-Date).AddMinutes(5)
+while ($true) {
+    try { [void][Net.Dns]::GetHostAddresses('github.com'); break }
+    catch { if ((Get-Date) -gt $deadline) { throw "no network 5 min after installing NetKVM (virtio NIC): $_" }; Start-Sleep 5 }
+}
+Get-NetAdapter | Where-Object Status -eq 'Up' | ForEach-Object { Write-Output "network up: $($_.Name) $($_.InterfaceDescription)" }
 
 # Enable RDP
 Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
 Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
 
-# Make sure nothing got encrypted (golden image must not be BitLocker-protected)
-Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Control\BitLocker PreventDeviceEncryption 1 -Type DWord
-$bl = Get-BitLockerVolume -MountPoint C: -ErrorAction SilentlyContinue
-if ($bl -and $bl.VolumeStatus -ne 'FullyDecrypted') {
-    Disable-BitLocker -MountPoint C: | Out-Null
-    while ((Get-BitLockerVolume -MountPoint C:).VolumeStatus -ne 'FullyDecrypted') { Start-Sleep 10 }
+# Make sure nothing got encrypted (golden image must not be BitLocker-protected). Desktop editions
+# only: Server has no automatic device encryption, and the BitLocker cmdlets exist only once the
+# BitLocker feature is installed.
+if ($Edition -eq 'desktop') {
+    Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Control\BitLocker PreventDeviceEncryption 1 -Type DWord
+}
+if (Get-Command Get-BitLockerVolume -ErrorAction SilentlyContinue) {
+    $bl = Get-BitLockerVolume -MountPoint C: -ErrorAction SilentlyContinue
+    if ($bl -and $bl.VolumeStatus -ne 'FullyDecrypted') {
+        Disable-BitLocker -MountPoint C: | Out-Null
+        while ((Get-BitLockerVolume -MountPoint C:).VolumeStatus -ne 'FullyDecrypted') { Start-Sleep 10 }
+    }
+}
+
+# Server: don't open Server Manager at every logon (clones are mostly used over RDP)
+if ($Edition -eq 'server') {
+    $SM = 'HKLM:\SOFTWARE\Microsoft\ServerManager'
+    if (Test-Path $SM) { Set-ItemProperty $SM DoNotOpenServerManagerAtLogon 1 -Type DWord }
 }
 
 # cloudbase-init (cloud-init for Windows; used by the template's cloud-init/sysprep volumes).
@@ -250,12 +285,14 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 . C:\Windows\Temp\build-lib.ps1
 trap { Set-BuildFailed 'stage2' $_; Stop-Transcript; exit 1 }
+. C:\Windows\Temp\build-params.ps1
 Start-Sleep -Seconds 60                       # let services settle after boot
 
 # Windows Update rounds. Drivers and feature upgrades are excluded (virtio drivers come from
 # virtio-win; the image stays on the ISO's release). A transient error reboots into another round.
-# A clean run needs about 4 rounds (cumulative update, then the Defender platform, then a check).
-$MaxRounds = 8
+# A clean Windows 11 run needs about 4 rounds (cumulative update, then the Defender platform, then a
+# check); older releases (Server 2016) need more. The limit is WU_MAX_ROUNDS in os.env.
+$MaxRounds = $WuMaxRounds
 $RoundFile = 'C:\Windows\Temp\build-wu-round.txt'
 $round = 1 + [int](Get-Content $RoundFile -ErrorAction SilentlyContinue)
 Set-Content $RoundFile $round
@@ -313,7 +350,7 @@ if ($retry) { Stop-Transcript; Restart-Computer -Force; exit 0 }
 
 Set-BuildStatus 'preparing sysprep'
 Unregister-ScheduledTask -TaskName BootSourceSysprep -Confirm:$false
-Assert-VirtioStorageDrivers
+Assert-VirtioDrivers
 # Clones grow C: at first boot (SetupComplete), which only works while C: is the last partition. Setup
 # or a WinRE servicing update can append a recovery partition after it (autounattend.xml creates one
 # before C: to prevent that).

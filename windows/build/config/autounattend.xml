@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Windows 11 Pro unattended install for the win11 boot source (adapted from kubevirt-gitops/win2k22).
-     The build VM's disk is SATA, so WinPE needs no driver injection. Clones use virtio disks: post-install
-     installs virtio-win and checks viostor/vioscsi are in the driver store before sysprep.
-     Post-install runs from the scripts CD-ROM. BUILD_ADMIN_PASSWORD is replaced by install.sh with a random
-     password for each build; nobody needs it after the build. -->
+<!-- Unattended install for a Windows boot source, shared by every version (windows/build).
+     install.sh fills the at-sign placeholders from winXX/base/os.env, keeps the product key block
+     only when PRODUCT_KEY is set, keeps the desktop-only blocks only for EDITION=desktop, and replaces the build password placeholder with a random password for each build
+     (nobody needs it after the build).
+     The build VM's disk is SATA, so WinPE needs no driver injection. Clones use virtio disks:
+     post-install installs virtio-win and checks viostor/vioscsi are in the driver store before sysprep. -->
 <unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <settings pass="windowsPE">
         <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
@@ -32,7 +33,7 @@
                             <Type>MSR</Type>
                             <Size>16</Size>
                         </CreatePartition>
-                        <!-- WinRE gets its own partition here, BEFORE C:. Without one, 24H2 Setup shrinks C: and
+                        <!-- WinRE gets its own partition here, BEFORE C:. Without one, Setup (e.g. Windows 11 24H2) shrinks C: and
                              appends a recovery partition after it, which blocks the clone's SetupComplete
                              Resize-Partition (and cloudbase-init ExtendVolumes): build 10 clones on 80 GiB disks
                              kept a 62.8 GB C:. C: must stay the last partition; stage 2 checks that. -->
@@ -79,8 +80,10 @@
                 <OSImage>
                     <InstallFrom>
                         <MetaData wcm:action="add">
-                            <Key>/IMAGE/NAME</Key>
-                            <Value>Windows 11 Pro</Value>
+                            <!-- Desktop: /IMAGE/NAME (e.g. "Windows 11 Pro"). Server: /IMAGE/INDEX 2, Standard
+                                 (Desktop Experience); index 1 is Server Core. -->
+                            <Key>@IMAGE_KEY@</Key>
+                            <Value>@IMAGE_VALUE@</Value>
                         </MetaData>
                     </InstallFrom>
                     <InstallTo>
@@ -90,11 +93,12 @@
                 </OSImage>
             </ImageInstall>
             <UserData>
-                <!-- Microsoft's public generic Windows 11 Pro install key: selects the edition, does not activate -->
+                <!-- @IF_PRODUCT_KEY@ Microsoft's public generic install key: selects the edition, does not activate -->
                 <ProductKey>
-                    <Key>VK7JG-NPHTM-C97JM-9MPGT-3V66T</Key>
+                    <Key>@PRODUCT_KEY@</Key>
                     <WillShowUI>OnError</WillShowUI>
                 </ProductKey>
+                <!-- @END_PRODUCT_KEY@ -->
                 <AcceptEula>true</AcceptEula>
                 <FullName>Administrator</FullName>
                 <Organization>My Organization</Organization>
@@ -110,10 +114,11 @@
         </component>
     </settings>
     <settings pass="specialize">
-        <!-- No automatic device encryption: an encrypted golden image will not boot in clones (own TPM) -->
+        <!-- @IF_DESKTOP@ No automatic device encryption: an encrypted golden image will not boot in clones (own TPM) -->
         <component name="Microsoft-Windows-SecureStartup-FilterDriver" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
             <PreventDeviceEncryption>true</PreventDeviceEncryption>
         </component>
+        <!-- @END_DESKTOP@ -->
         <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
             <RunSynchronous>
                 <!-- Promoted/Store app installs and updates break sysprep /generalize -->
@@ -144,7 +149,7 @@
             <UserLocale>en-US</UserLocale>
         </component>
         <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-            <!-- Enables the built-in Administrator (disabled by default on Windows 11) -->
+            <!-- Sets the built-in Administrator password, and enables the account on desktop editions (disabled by default) -->
             <UserAccounts>
                 <AdministratorPassword>
                     <Value>BUILD_ADMIN_PASSWORD</Value>

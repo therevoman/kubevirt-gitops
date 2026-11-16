@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: windows-2k22-install
+  name: windows-OS-install
   namespace: kubevirt-gitops
   annotations:
     # Under Argo CD this runs after every sync; install.sh exits at once if the boot source exists.
@@ -9,20 +9,23 @@ metadata:
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   backoffLimit: 0
-  activeDeadlineSeconds: 21600      # 6h hard stop (Server images run Windows Update)
+  activeDeadlineSeconds: 21600      # 6h hard stop; install.sh fails sooner on a stuck build
   ttlSecondsAfterFinished: 86400
   template:
     spec:
-      serviceAccountName: windows-2k22-install
+      serviceAccountName: windows-OS-install
       restartPolicy: Never
       containers:
       - name: ose-cli
         image: registry.redhat.io/openshift4/ose-cli-rhel9:latest
         command: ["/bin/bash", "/scripts/install.sh"]
+        envFrom:
+        - configMapRef:
+            name: windows-OS-install-params
         volumeMounts:
         - name: scripts
           mountPath: /scripts
       volumes:
       - name: scripts
         configMap:
-          name: windows-2k22-install-scripts
+          name: windows-OS-install-scripts

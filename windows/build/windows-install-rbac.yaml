@@ -3,7 +3,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: windows-11-install-admin
+  name: windows-OS-install-admin
   namespace: kubevirt-gitops
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -11,13 +11,13 @@ roleRef:
   name: admin
 subjects:
 - kind: ServiceAccount
-  name: windows-11-install
+  name: windows-OS-install
   namespace: kubevirt-gitops
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: windows-11-install-image-edit
+  name: windows-OS-install-image-edit
   namespace: openshift-virtualization-os-images
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -25,7 +25,7 @@ roleRef:
   name: os-images.kubevirt.io:edit
 subjects:
 - kind: ServiceAccount
-  name: windows-11-install
+  name: windows-OS-install
   namespace: kubevirt-gitops
 ---
 # OpenShift only allows 'oc exec' into a pod if the caller may use the pod's SCC. install.sh execs
@@ -33,7 +33,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: windows-11-install-launcher-exec
+  name: windows-OS-install-launcher-exec
   namespace: kubevirt-gitops
 rules:
 - apiGroups: ["security.openshift.io"]
@@ -44,13 +44,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: windows-11-install-launcher-exec
+  name: windows-OS-install-launcher-exec
   namespace: kubevirt-gitops
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: windows-11-install-launcher-exec
+  name: windows-OS-install-launcher-exec
 subjects:
 - kind: ServiceAccount
-  name: windows-11-install
+  name: windows-OS-install
   namespace: kubevirt-gitops

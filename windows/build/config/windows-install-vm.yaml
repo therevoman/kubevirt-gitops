@@ -1,32 +1,34 @@
+# Build VM for a Windows boot source. install.sh fills the at-sign placeholders from the build
+# parameters (winXX/base/os.env) and drops the TPM block unless TPM=true.
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
   annotations:
-    name.os.template.kubevirt.io/win11: Microsoft Windows 11
-    description: windows-11-install (win11 boot-source build)
+    name.os.template.kubevirt.io/@BOOT_SOURCE@: @OS_NAME@
+    description: @NAME@ (@BOOT_SOURCE@ boot-source build)
   labels:
-    app: windows-11-install
-  name: windows-11-install
+    app: @NAME@
+  name: @NAME@
 spec:
   runStrategy: Manual
   dataVolumeTemplates:
   - metadata:
-      name: windows-11-install-rootdisk
+      name: @NAME@-rootdisk
     spec:
       source:
         blank: {}
-      storage:
+      storage:                         # StorageProfile picks accessModes/volumeMode
         resources:
           requests:
-            storage: 64Gi
+            storage: @DISK_SIZE@
   template:
     metadata:
       annotations:
-        vm.kubevirt.io/os: windows11
-        vm.kubevirt.io/workload: desktop
+        vm.kubevirt.io/os: @OS_ID@
+        vm.kubevirt.io/workload: @WORKLOAD@
       labels:
-        kubevirt.io/domain: windows-11-install
-        vm.kubevirt.io/name: windows-11-install
+        kubevirt.io/domain: @NAME@
+        vm.kubevirt.io/name: @NAME@
     spec:
       architecture: amd64
       domain:
@@ -51,7 +53,7 @@ spec:
           - name: rootdisk
             bootOrder: 2
             disk:
-              bus: sata                # same bus as the windows11 templates
+              bus: sata                # inbox driver in Windows Setup; clones get virtio drivers from virtio-win
           - name: install-iso
             bootOrder: 1
             cdrom:
@@ -59,17 +61,19 @@ spec:
           - name: windows-guest-tools
             cdrom:
               bus: sata
-          - name: windows-11-install-scripts
+          - name: install-scripts
             cdrom:
               bus: sata
+          # @IF_TPM@
           tpm: {}                      # Windows 11 requires TPM 2.0
+          # @END_TPM@
           inputs:
           - bus: usb
             name: tablet
             type: tablet
           interfaces:
           - name: default
-            model: e1000e              # works before virtio-win is installed
+            model: virtio              # NetKVM from virtio-win; post-install installs it before using the network
             masquerade: {}
           rng: {}
         features:
@@ -96,7 +100,7 @@ spec:
             efi:
               secureBoot: true
       evictionStrategy: None
-      hostname: windows-11-install
+      hostname: @NAME@
       networks:
       - name: default
         pod: {}
@@ -104,13 +108,13 @@ spec:
       volumes:
       - name: rootdisk
         dataVolume:
-          name: windows-11-install-rootdisk
+          name: @NAME@-rootdisk
       - name: install-iso
         persistentVolumeClaim:
-          claimName: win11-install-iso
+          claimName: @ISO_DV@
       - name: windows-guest-tools
         containerDisk:
-          image: VIRTIO_WIN_IMAGE      # replaced by install.sh
-      - name: windows-11-install-scripts
+          image: @VIRTIO_WIN_IMAGE@
+      - name: install-scripts
         secret:
-          secretName: windows-11-install-cd   # created by install.sh (holds the build password)
+          secretName: @CD_SECRET@      # created by install.sh (holds the build password)

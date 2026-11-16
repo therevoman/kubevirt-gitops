@@ -1,6 +1,8 @@
 #!/bin/bash
-# Runs in the windows-11-install Job: build VM -> wait for sysprep shutdown -> clone to the win11 boot source.
-# Idempotent: exits 0 if the boot-source PVC already exists (delete it to rebuild).
+# Runs in the windows-<OS>-install Job: build VM -> wait for sysprep shutdown -> clone to the boot source.
+# Shared by every Windows version; the parameters come from ConfigMap windows-<OS>-install-params
+# (winXX/base/os.env) through envFrom. Idempotent: exits 0 if the boot-source PVC already exists
+# (delete it to rebuild).
 #
 # Fail fast: the Job exits non-zero as soon as the build is known to be broken, instead of waiting for
 # activeDeadlineSeconds:
@@ -11,22 +13,52 @@
 #  - the guest shuts down before sysprep started.
 # On a failure the VM is left as it is for debugging; delete the Job and the VM to retry.
 set -u
-NAME=windows-11-install
-ISO_DV=win11-install-iso
-BOOT_SOURCE=win11
-IMAGES_NS=openshift-virtualization-os-images
-CD_SECRET=windows-11-install-cd
-AGENT_TIMEOUT_MIN=60      # VM start -> first status from the guest (Windows Setup + first logon)
-STALL_MIN=150             # longest a single step (e.g. one Windows Update round) may take
-NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
-cd /scripts
 
 log() { echo "$(date -u +%H:%M:%S) $*"; }
+
+for v in OS BOOT_SOURCE OS_ID OS_NAME WORKLOAD EDITION DRIVER_DIR IMAGE_KEY IMAGE_VALUE TPM DISK_SIZE; do
+  [ -n "${!v:-}" ] || { log "FAILED: parameter $v is not set (ConfigMap windows-<OS>-install-params, from winXX/base/os.env)"; exit 1; }
+done
+PRODUCT_KEY=${PRODUCT_KEY:-}
+AGENT_TIMEOUT_MIN=${AGENT_TIMEOUT_MIN:-60}   # VM start -> first status from the guest (Windows Setup + first logon)
+STALL_MIN=${STALL_MIN:-150}                  # longest a single step (e.g. one Windows Update round) may take
+WU_MAX_ROUNDS=${WU_MAX_ROUNDS:-8}            # Windows Update rounds before the build gives up
+
+NAME=windows-$OS-install
+ISO_DV=$BOOT_SOURCE-install-iso
+IMAGES_NS=openshift-virtualization-os-images
+CD_SECRET=$NAME-cd
+NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+
+cd /scripts || { log "FAILED: /scripts is not mounted"; exit 1; }
+
+# Replace @KEY@ with a value in a file (the value may hold / | & characters)
+subst() {  # <file> <KEY> <value>
+  local v=${3//\\/\\\\}; v=${v//|/\\|}; v=${v//&/\\&}
+  sed -i "s|@$2@|$v|g" "$1"
+}
+# Keep or drop the lines between "@IF_<BLOCK>@" and "@END_<BLOCK>@" markers
+block() {  # <file> <BLOCK> <keep: true|false>
+  if [ "$3" = true ]; then sed -i "/@IF_$2@/d; /@END_$2@/d" "$1"
+  else sed -i "/@IF_$2@/,/@END_$2@/d" "$1"; fi
+}
+render() {  # <template> <output>: fill every build parameter, fail on any placeholder left over
+  cp "$1" "$2"
+  block "$2" TPM "$TPM"
+  block "$2" DESKTOP "$([ "$EDITION" = desktop ] && echo true || echo false)"
+  block "$2" PRODUCT_KEY "$([ -n "$PRODUCT_KEY" ] && echo true || echo false)"
+  for v in NAME BOOT_SOURCE ISO_DV OS_ID OS_NAME WORKLOAD EDITION DRIVER_DIR IMAGE_KEY IMAGE_VALUE PRODUCT_KEY DISK_SIZE \
+           WU_MAX_ROUNDS CD_SECRET VIRTIO_WIN_IMAGE BUILD_NAMESPACE; do
+    subst "$2" $v "${!v:-}"
+  done
+  if grep -n '@[A-Z_]*@' "$2"; then log "FAILED: unfilled placeholders in $2"; exit 1; fi
+}
 
 if oc get pvc $BOOT_SOURCE -n $IMAGES_NS >/dev/null 2>&1; then
   log "PVC $IMAGES_NS/$BOOT_SOURCE already exists; delete it to rebuild. Nothing to do."
   exit 0
 fi
+log "Building $OS_NAME ($EDITION) into $IMAGES_NS/$BOOT_SOURCE"
 
 log "Waiting for the ISO import (DataVolume $ISO_DV)"
 oc wait dv/$ISO_DV -n $NS --for=condition=Ready --timeout=3600s || { log "ISO import failed"; exit 1; }
@@ -34,10 +66,24 @@ oc wait dv/$ISO_DV -n $NS --for=condition=Ready --timeout=3600s || { log "ISO im
 curl -sfk http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz -o /tmp/virtctl.tar.gz \
   && tar -xzf /tmp/virtctl.tar.gz -C /tmp/ || { log "virtctl download failed"; exit 1; }
 
+# virtio-win image matching this CNV release (falls back to a release tag if the CM is not readable)
+VIRTIO_WIN_IMAGE=$(oc get cm virtio-win -n openshift-cnv -o jsonpath='{.data.virtio-win-image}' 2>/dev/null)
+VIRTIO_WIN_IMAGE=${VIRTIO_WIN_IMAGE:-registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.22}
+log "virtio-win image: $VIRTIO_WIN_IMAGE"
+# shellcheck disable=SC2034  # read by render through ${!v}
+BUILD_NAMESPACE=$NS
+
 # The build VM's scripts CD: autounattend.xml with a random Administrator password for this build
-# (never logged, deleted with the Secret when the Job ends), plus post-install.ps1.
+# (never logged, deleted with the Secret when the Job ends), post-install.ps1, and its parameters.
+mkdir -p /tmp/cd
+render autounattend.xml /tmp/cd/autounattend.xml
+cp post-install.ps1 /tmp/cd/
+cat > /tmp/cd/build-params.ps1 <<EOF
+\$DriverDir = '$DRIVER_DIR'
+\$Edition = '$EDITION'
+\$WuMaxRounds = $WU_MAX_ROUNDS
+EOF
 BUILD_PW="Bd-$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)-7k"
-mkdir -p /tmp/cd && cp autounattend.xml post-install.ps1 /tmp/cd/
 sed -i "s|BUILD_ADMIN_PASSWORD|$BUILD_PW|g" /tmp/cd/autounattend.xml
 unset BUILD_PW
 oc create secret generic $CD_SECRET -n $NS --from-file=/tmp/cd --dry-run=client -o yaml | oc apply -f - >/dev/null \
@@ -45,11 +91,8 @@ oc create secret generic $CD_SECRET -n $NS --from-file=/tmp/cd --dry-run=client 
 rm -rf /tmp/cd
 trap 'oc delete secret $CD_SECRET -n $NS --ignore-not-found >/dev/null' EXIT
 
-# virtio-win image matching this CNV release (falls back to a release tag if the CM is not readable)
-VIRTIO_IMG=$(oc get cm virtio-win -n openshift-cnv -o jsonpath='{.data.virtio-win-image}' 2>/dev/null)
-VIRTIO_IMG=${VIRTIO_IMG:-registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.22}
-log "virtio-win image: $VIRTIO_IMG"
-sed "s|VIRTIO_WIN_IMAGE|$VIRTIO_IMG|" windows-install-vm.yaml | oc apply -n $NS -f -
+render windows-install-vm.yaml /tmp/vm.yaml
+oc apply -n $NS -f /tmp/vm.yaml || { log "cannot create VM $NAME"; exit 1; }
 
 /tmp/virtctl start $NAME -n $NS
 log "Started VM $NAME"
@@ -121,7 +164,8 @@ done
 [[ "$last" == *"sysprep running"* ]] || { log "FAILED: the guest shut down before sysprep started (last status: ${last:-none})"; exit 1; }
 log "Guest shut down after sysprep"
 
-sed "s|BUILD_NAMESPACE|$NS|" clone-boot-source.yaml | oc apply -f -
+render clone-boot-source.yaml /tmp/clone.yaml
+oc apply -f /tmp/clone.yaml || { log "cannot create DataVolume $IMAGES_NS/$BOOT_SOURCE"; exit 1; }
 log "Cloning the root disk to $IMAGES_NS/$BOOT_SOURCE"
 oc wait dv/$BOOT_SOURCE -n $IMAGES_NS --for=condition=Ready --timeout=3600s || { log "clone failed"; exit 1; }
 
