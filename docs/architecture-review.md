@@ -178,8 +178,20 @@ The plan, in order:
   - New RBAC: Role `windows-<OS>-install-image-publish` in `openshift-virtualization-os-images`
     (delete and label PVCs, delete DataVolumes).
   - [ ] Not yet run on a cluster.
-- [ ] **E3 Argo CD health.** Move the Lua health checks in `setup/` into the GitOps operator
-  config, so DataVolumes, VMs and build Jobs report real health.
+- [x] **E3 Argo CD health.** `gitopsservice/health` is a kustomization that puts the Lua checks
+  into `spec.resourceHealthChecks` of ArgoCD `openshift-gitops` (`oc apply -k
+  gitopsservice/health`). The `.lua` files stay separate and are filled in by `replacements`.
+  - Checks: HyperConverged (from `setup/`), plus new ones for DataSource and
+    VirtualMachinePool.
+  - The `setup/` checks for VirtualMachine, VirtualMachineInstance and DataVolume were dropped:
+    Argo CD ships those (they came from this repository). Build Jobs and CronJobs use Argo CD's
+    built-in batch checks.
+  - Removed `setup/` (`install.sh`, `build-resourcecustomizations.sh`, and `change-repo.sh`, which
+    rewrote `*/application.yaml` files that no longer exist).
+  - `hack/validate.sh` checks every check was filled in, and syntax-checks the Lua when `luac` is
+    installed.
+  - [ ] Not yet checked on a cluster: that the built-in VM/DataVolume checks are present in the
+    installed Argo CD (a VM's health in the UI should show Progressing while it starts).
 - [ ] **E4 Example VMs per Windows version.** Clone the DataSource with a sysprep or
   cloudbase-init volume, to show each image working end to end.
 - [x] **E5 Per-directory READMEs** for `windows/build` (parameters, how to add a version),

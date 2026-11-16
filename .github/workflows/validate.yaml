@@ -1,4 +1,4 @@
-# Validates every push and pull request: kustomize builds, Argo CD paths, Windows build templates,
+# Validates every push and pull request: kustomize builds, Argo CD paths and health checks, Windows build templates,
 # shellcheck (hack/validate.sh), Kubernetes schemas (kubeconform), YAML style (yamllint) and the
 # PowerShell build scripts (hack/check-powershell.ps1).
 name: validate
@@ -20,11 +20,12 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install kustomize, kubeconform, yamllint
+    - name: Install kustomize, kubeconform, yamllint, Lua
       run: |
         curl -sSfL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" | tar -xz -C /usr/local/bin kustomize
         curl -sSfL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" | tar -xz -C /usr/local/bin kubeconform
         pip install --user yamllint==1.35.1 PyYAML==6.0.2
+        sudo apt-get install -y -qq lua5.4 >/dev/null   # luac for the Argo CD health checks
         kustomize version; kubeconform -v; yamllint --version
 
     - name: Builds, Argo CD paths, Windows templates, shellcheck

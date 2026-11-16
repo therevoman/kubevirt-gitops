@@ -10,16 +10,12 @@ the default leans to OpenShift products and namespaces.
 
 ## Get Started
 
-Under the [setup](setup) directory, there are a number of scripts to
-help in an OpenShift GitOps deployment.
+On an OpenShift cluster with OpenShift Virtualization and OpenShift GitOps:
 
-To run everything, use [`install.sh`](setup/install.sh) without any arguments.
-This script will:
-
-  - Discover the ArgoCD namespace and configuration CR names.
-  - Install health check scripts that ArgoCD uses to better track status of custom resources.
-
-More in-depth descriptions may be found in the [README](setup/)
+1. Add the Argo CD health checks for KubeVirt kinds to the GitOps operator's instance:
+   `oc apply -k gitopsservice/health` (see [gitopsservice](gitopsservice/README.md)).
+2. Create the cluster's app-of-apps: `oc apply -k clusters/<cluster>` (see
+   [Microsoft Windows boot sources](#microsoft-windows-boot-sources)).
 
 ## Repository layout
 
@@ -31,7 +27,7 @@ More in-depth descriptions may be found in the [README](setup/)
 | [datavolumes](datavolumes) | Fedora and CentOS Stream cloud-image DataVolumes |
 | [vms](vms) | Demo Fedora and CentOS VMs cloned from DataSources |
 | [examples](examples) | VirtualMachinePool demos (not deployed by `clusters/`) |
-| [setup](setup), [gitopsservice](gitopsservice) | Argo CD helper scripts and health checks |
+| [gitopsservice](gitopsservice) | OpenShift GitOps settings: Argo CD health checks, infra placement, namespaces |
 | [docs](docs) | [Architecture review and improvement tracker](docs/architecture-review.md), [fork survey](docs/upstream-fork-survey.md) |
 
 ### DataVolumes
