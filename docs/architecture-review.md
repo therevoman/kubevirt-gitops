@@ -80,10 +80,19 @@ The plan, in order:
     apart from comments and the scripts-CD volume name.
   - `bash -n` and `shellcheck` pass on `install.sh`.
 
+  On the snok cluster on 2026-11-16 (OpenShift 5.0.1, OpenShift Virtualization 5.0.0):
+  - Every overlay of all six versions passes a server-side dry run. win11, win2k19 and win2k22
+    show their existing resources as `unchanged`.
+  - win10 built end to end on the shared build (3.6). Two fixes came out of it:
+    - Multi-architecture ISOs (Windows 10 Media Creation Tool) stop at a Windows Boot Manager
+      menu that has no timeout. `install.sh` now presses Enter when the ISO reads stall.
+    - On Windows 10, removing the per-user Cortana package at first logon fails with
+      0x80070002. `post-install.ps1` now logs failed Appx removals as warnings.
+  - The virtio NIC works: NetKVM installed, network up, `netkvm.inf` in the driver store.
+
   Not yet checked:
-  - `post-install.ps1` hasn't been parse-checked (no PowerShell available here).
-  - win2k19 and win2k22 haven't been built on the new build yet. Rebuild them once and record the
-    result here.
+  - win2k19 and win2k22 haven't been rebuilt on the new build: their boot sources exist on snok,
+    and a rebuild replaces them. Rebuild them once and record the result here.
 
 ## Step 3: new Windows versions
 
@@ -95,17 +104,24 @@ The plan, in order:
   **Blocked:** no Server 2025 ISO exists yet. Upload it as `isos/windows/server-2025.iso` to
   `qnas.revoweb.home` and to `192.168.20.14` (ocs).
 - [x] **3.4** Applications for all three in every `clusters/<cluster>`.
-- [ ] **3.5 Confirm against a cluster:**
+- [x] **3.5 Confirm against a cluster** (snok, 2026-11-16):
   - [x] ISO names. On both `qnas.revoweb.home` and `192.168.20.14`:
     `Windows10-22H2.iso` and `windows/server-2016.iso` exist; `windows/server-2025.iso` is
     missing (see 3.3). Expect the 2016 file to be an evaluation ISO (index 2 = Standard Desktop
     Experience).
-  - The template disk sizes (`DISK_SIZE`; a clone source must not be larger than what the
-    templates request):
-    `oc get template -n openshift -o name | grep -E 'windows(10|2k16|2k25)'`
-  - That the DataSources `win10`, `win2k16` and `win2k25` exist in
-    `openshift-virtualization-os-images`.
-- [ ] **3.6 Build each new version once** and record the result here.
+  - [x] Template disk sizes. The templates request 60Gi for windows10 and windows2k16, 64Gi for
+    windows11 and windows2k25. `DISK_SIZE` is not larger in any version (win2k25 is 60Gi).
+  - [x] The DataSources for all six versions exist in `openshift-virtualization-os-images`.
+  - Templates come in two variants: `*-medium` boots from SATA, `*-highperformance-*` from virtio.
+    The win10 image boots on both (see 3.6).
+- [~] **3.6 Build each new version once.**
+  - [x] win10, on snok on 2026-11-16, in 41 min. Steps: Setup, post-install, 2 Windows Update
+    rounds, sysprep, E1 check (2 min), then `win10-2026-11` was published as `win10`. Clones
+    boot and run cloudbase-init from the `windows10-highperformance-medium` template (virtio
+    disk) and from `examples/windows/win10` (SATA). That template asks for dedicated CPUs, which
+    snok doesn't have, so the test removed them.
+  - [ ] win2k16: not built yet.
+  - [ ] win2k25: blocked on its ISO (3.3).
 
 ## Step 4: delivery and quality (open)
 
@@ -162,9 +178,8 @@ The plan, in order:
   reads that token back. That covers specialize, OOBE, SetupComplete, the guest agent and
   cloudbase-init. Only then is the disk cloned to the boot source, so a bad sysprep never reaches
   the templates. `VERIFY=false` in `os.env` skips it; `VERIFY_TIMEOUT_MIN` (30) bounds it.
-  - [ ] Not yet run on a cluster. The check VM boots on SATA like the build VM; the
-    `#ps1_sysnative` user data relies on cloudbase-init's UserDataPlugin and the NoCloud service,
-    which post-install enables.
+  - [x] Ran on snok on 2026-11-16 (win10): the guest agent answered right away, and the token
+    came back after 2 min. The check VM and its Secret were then deleted.
 - [x] **E2 Monthly patched images.** CronJob `windows-<OS>-rebuild` (in `windows/build`) runs
   the Job's pod template on `REBUILD_SCHEDULE` from `os.env`: one day per version, the 15th to
   the 20th, after Patch Tuesday. Every build (Job or CronJob) is stored as
@@ -177,7 +192,13 @@ The plan, in order:
     `clusters/<cluster>/windows/kustomization.yaml`.
   - New RBAC: Role `windows-<OS>-install-image-publish` in `openshift-virtualization-os-images`
     (delete and label PVCs, delete DataVolumes).
-  - [ ] Not yet run on a cluster.
+  - [x] Checked on snok on 2026-11-16 (win10):
+    - First build: `win10-2026-11` was created with its label, then published as `win10`
+      (DataSource Ready). The build VM was deleted.
+    - A Job created from the CronJob detected rebuild mode and exited ("this month's build
+      exists"). Rerunning the Job exited ("boot source exists").
+  - [ ] Not yet checked: replacing an existing boot source, and pruning past `KEEP_BUILDS`.
+    These need a second month, or deleting a live boot source on snok.
 - [x] **E3 Argo CD health.** `gitopsservice/health` is a kustomization that puts the Lua checks
   into `spec.resourceHealthChecks` of ArgoCD `openshift-gitops` (`oc apply -k
   gitopsservice/health`). The `.lua` files stay separate and are filled in by `replacements`.
@@ -190,15 +211,23 @@ The plan, in order:
     rewrote `*/application.yaml` files that no longer exist).
   - `hack/validate.sh` checks every check was filled in, and syntax-checks the Lua when `luac` is
     installed.
-  - [ ] Not yet checked on a cluster: that the built-in VM/DataVolume checks are present in the
-    installed Argo CD (a VM's health in the UI should show Progressing while it starts).
+  - [x] Applied on snok on 2026-11-16 (GitOps 1.22.3, Argo CD 3.5.6). The operator wrote all
+    three checks into `argocd-cm`. Checked against live objects with `argocd admin settings
+    resource-overrides health`:
+    - HyperConverged: Healthy
+    - DataSource `win11`: Healthy
+    - DataSource `win10` before its build: Progressing ("PVC not found")
+    - VM and DataVolume: Running and ImportInProgress, from Argo CD's built-in checks
 - [x] **E4 Example VMs per Windows version.** `examples/windows/<version>` (all six) creates
   `<boot source>-example`, cloned from the DataSource. Its cloudbase-init user data comes from a
   Secret you create from `user-data.example.yaml`: an administrator account, so no password is in
   git. A shared Component (`examples/windows/base`) holds the VM; each version sets
   `BOOT_SOURCE`, `OS_ID` and `DISK_SIZE`, and `win11` adds a TPM. The README shows how to check
   the guest agent's OS info and log on.
-  - [ ] Not yet run on a cluster. The `users` cloud-config (with `passwd`) is handled by
-    cloudbase-init's UserDataPlugin, which post-install enables.
+  - [x] Ran on snok on 2026-11-16 with win11 (the existing boot source) and win10 (the new
+    build). Each clone booted. cloudbase-init created the `example` account (active, in
+    Administrators), checked through the guest agent.
+  - The guest agent reports `prettyName` "Windows 10 Pro" on Windows 11 (registry
+    ProductName); `version` and `kernelRelease` are correct (Windows 11, build 26200).
 - [x] **E5 Per-directory READMEs** for `windows/build` (parameters, how to add a version),
   `examples/` and `vms/`.
