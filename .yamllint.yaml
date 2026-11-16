@@ -1,0 +1,23 @@
+# yamllint config for CI: catch real YAML errors (syntax, duplicate keys, bad indentation of
+# mappings, tabs) without restyling the existing manifests.
+extends: default
+ignore: |
+  .git/
+  # templates with @PLACEHOLDERS@: hack/validate.sh checks them after rendering
+  windows/build/config/
+rules:
+  document-start: disable          # many manifests omit ---
+  line-length: disable             # long URLs, SSH keys, cloud-init
+  comments: disable                # inline comment spacing varies
+  comments-indentation: disable
+  truthy:
+    check-keys: false              # "on:" in GitHub workflows
+  indentation:
+    spaces: consistent
+    indent-sequences: whatever     # both "- " styles are used
+  trailing-spaces: disable
+  empty-lines:
+    max: 2
+  new-line-at-end-of-file: disable
+  braces:
+    max-spaces-inside: 1

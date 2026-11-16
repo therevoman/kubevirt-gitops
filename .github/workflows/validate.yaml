@@ -1,0 +1,56 @@
+# Validates every push and pull request: kustomize builds, Argo CD paths, Windows build templates,
+# shellcheck (hack/validate.sh), Kubernetes schemas (kubeconform), YAML style (yamllint) and the
+# PowerShell build scripts (hack/check-powershell.ps1).
+name: validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  KUSTOMIZE_VERSION: v5.4.3
+  KUBECONFORM_VERSION: v0.6.7
+
+jobs:
+  manifests:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install kustomize, kubeconform, yamllint
+      run: |
+        curl -sSfL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" | tar -xz -C /usr/local/bin kustomize
+        curl -sSfL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" | tar -xz -C /usr/local/bin kubeconform
+        pip install --user yamllint==1.35.1 PyYAML==6.0.2
+        kustomize version; kubeconform -v; yamllint --version
+
+    - name: Builds, Argo CD paths, Windows templates, shellcheck
+      run: hack/validate.sh
+
+    - name: yamllint
+      run: yamllint -c .yamllint.yaml -f github .
+
+    - name: kubeconform
+      # Every kustomization except Components, against the Kubernetes schemas plus the community
+      # CRD catalog (KubeVirt, CDI, Argo CD). Kinds with no published schema are reported as skipped.
+      run: |
+        for k in $(git ls-files '*kustomization.yaml'); do
+          grep -q '^kind: Component' "$k" && continue
+          d=$(dirname "$k"); echo "--- $d" >&2
+          kustomize build "$d" > "/tmp/render-$(echo "$d" | tr / _).yaml"
+        done
+        kubeconform -summary -ignore-missing-schemas \
+          -schema-location default \
+          -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+          /tmp/render-*.yaml
+
+  powershell:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    - name: Parse and analyze the Windows build scripts
+      shell: pwsh
+      run: ./hack/check-powershell.ps1
