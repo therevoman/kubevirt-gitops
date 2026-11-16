@@ -109,9 +109,17 @@ The plan, in order:
 
 ## Step 4: delivery and quality (open)
 
-- [ ] **4.1 ApplicationSet.** A matrix of clusters × Windows versions replaces the 4 × 6
-  near-identical Applications in `clusters/*/applications.yaml`. 12 of the 15 overlays per OS
-  are an empty `resources: ../../base`; only the ISO host differs, on `ocs`.
+- [x] **4.1 ApplicationSet.** `clusters/base/windows-boot-sources.yaml` is an ApplicationSet
+  with a matrix generator: the cluster (set per cluster with one patch) × a git directory
+  generator over `win*/overlays/<cluster>`. It replaces the 24 hand-written Applications, and a
+  new Windows version needs no Application edit.
+  - Generated names are the same as before (`<cluster>-<version>-boot-source`), checked for all
+    4 clusters.
+  - `preserveResourcesOnDeletion: true` keeps boot sources if the ApplicationSet or a version
+    is removed.
+  - Migration: delete a cluster's old Applications before applying (README, "Run one directly").
+  - [ ] Not yet checked on a live Argo CD. It needs goTemplate and matrix-parameter support
+    (Argo CD 2.5+).
 - [x] **4.2 ISO host per cluster.** `clusters/<cluster>/windows/` is a Component with one
   setting, `ISO_HOST`. It replaces the host part of every install ISO URL; the path stays in
   `winXX/base`. The settings ConfigMap is `local-config`, so it isn't applied. All per-cluster
