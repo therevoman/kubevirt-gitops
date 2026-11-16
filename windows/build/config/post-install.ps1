@@ -42,13 +42,21 @@ function Assert-VirtioDrivers {
     }
     Write-Output 'viostor.inf, vioscsi.inf and netkvm.inf are in the driver store'
 }
-# Sysprep fails on Appx packages installed for a user but not provisioned for all users
+# Sysprep fails on Appx packages installed for a user but not provisioned for all users.
+# A failed removal is only a warning: some packages are still being staged at first logon (Windows 10
+# Cortana, Microsoft.549981C3F5F10, fails with 0x80070002), this runs again right before sysprep, and
+# sysprep's own failure check reports a package that really blocks it.
 function Remove-UserOnlyAppx {
     $Provisioned = (Get-AppxProvisionedPackage -Online).PackageName
     Get-AppxPackage -AllUsers | Where-Object { -not $_.NonRemovable -and -not $_.IsFramework -and ($Provisioned -notcontains $_.PackageFullName) } |
         ForEach-Object {
-            Write-Output "Removing non-provisioned Appx $($_.PackageFullName)"
-            Remove-AppxPackage -Package $_.PackageFullName -AllUsers -ErrorAction SilentlyContinue
+            $pkg = $_.PackageFullName
+            Write-Output "Removing non-provisioned Appx $pkg"
+            try { Remove-AppxPackage -Package $pkg -AllUsers -ErrorAction Stop }
+            catch {
+                try { Remove-AppxPackage -Package $pkg -ErrorAction Stop }
+                catch { Write-Output "WARNING: could not remove $($pkg): $(($_.Exception.Message -split "`n")[0])" }
+            }
         }
 }
 '@
