@@ -24,11 +24,12 @@ automatically before it publishes a boot source. These examples are for trying a
 3. Check it:
 
    ```
-   oc get vmi win11-example -n <namespace> -o jsonpath='{.status.guestOSInfo.prettyName}{"\n"}'
+   oc get vmi win11-example -n <namespace> -o jsonpath='{.status.guestOSInfo.version} build {.status.guestOSInfo.kernelRelease}{"\n"}'
    virtctl vnc win11-example -n <namespace>
    ```
 
-   The first command shows the Windows version once the guest agent runs. In the VNC console, log
+   The first command shows the Windows version once the guest agent runs. Use `version`, not
+   `prettyName`: Windows 11 still reports "Windows 10 Pro" there (its registry ProductName). In the VNC console, log
    on with the account from your user data. cloudbase-init's log is in
    `C:\Program Files\Cloudbase Solutions\Cloudbase-Init\log\`.
 

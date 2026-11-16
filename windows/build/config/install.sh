@@ -152,14 +152,25 @@ for n in 1 2 3 4 5; do vexec virsh domstate $DOM >/dev/null 2>&1 && break; sleep
 ISO_DEV=$(vexec virsh domblklist $DOM | awk '/install-iso/ {print $1}')
 # (if the ISO's device is not found, the totals for all disks work too: the blank root disk is barely read)
 log "VMI running ($POD); pressing 'd' for the CD boot prompt (ISO device: ${ISO_DEV:-unknown, using all disks})"
-booted=0
-for i in $(seq 1 90); do
+# Multi-architecture media (e.g. the Windows 10 Media Creation Tool ISO) then stops at a Windows Boot
+# Manager menu (64-bit / 32-bit) with no timeout: the ISO reads stall at a few MiB. Enter there starts
+# the default, highlighted entry (64-bit).
+booted=0; prev=-1; still=0; enters=0
+for i in $(seq 1 120); do
   rd=$(vexec virsh domblkstat $DOM $ISO_DEV 2>/dev/null | awk '$2 == "rd_bytes" {s += $3} END {print s + 0}')
   if [ "${rd:-0}" -gt 52428800 ]; then booted=1; break; fi
-  vexec virsh send-key $DOM KEY_D >/dev/null 2>&1
+  if [ "${rd:-0}" -gt 1048576 ] && [ "$rd" = "$prev" ]; then still=$((still + 1)); else still=0; fi
+  prev=$rd
+  if [ $still -ge 8 ] && [ $enters -lt 3 ]; then
+    log "ISO reads stalled at $((rd / 1048576)) MiB: Windows Boot Manager menu (multi-architecture media?); pressing Enter"
+    vexec virsh send-key $DOM KEY_ENTER >/dev/null 2>&1
+    enters=$((enters + 1)); still=0
+  elif [ $still -eq 0 ]; then
+    vexec virsh send-key $DOM KEY_D >/dev/null 2>&1
+  fi
   sleep 1
 done
-[ $booted = 1 ] || { log "FAILED: the VM did not boot from the install ISO within 90s (CD boot prompt missed?)"; exit 1; }
+[ $booted = 1 ] || { log "FAILED: the VM did not boot from the install ISO within 120s (CD boot prompt missed?)"; exit 1; }
 log "Booting from the install ISO ($((rd / 1048576)) MiB read)"
 
 # Guest agent file read (empty output when the agent or the file is not there)
