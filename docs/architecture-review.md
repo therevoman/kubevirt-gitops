@@ -146,8 +146,13 @@ The plan, in order:
   the newest minor tag in the Red Hat catalog on 2026-11-16. The virtio-win fallback in
   `install.sh` is pinned to the same minor; comments say to bump both together. Normally the
   virtio-win image comes from the cluster (`openshift-cnv/virtio-win`).
-- [ ] **4.5** Outside this repository: `/opt/ocp4/bin/kustomize/kustomize` is a broken symlink
-  (it points at `kustomiz`). Use `oc kustomize` until it is fixed.
+- [x] **4.5 Local kustomize (outside this repository).** Correction to the review: the symlink is
+  fine. The review misread truncated `ls` output. The binary is
+  `/opt/ocp4/bin/kustomize/kustomize` (v5.8.3). `/opt/ocp4/bin/kustomize` is a directory, so
+  `kustomize` through `PATH=/opt/ocp4/bin` fails with "permission denied". Nothing changed in
+  `bin/`. To use it, add `/opt/ocp4/bin/kustomize` to `PATH`, or run
+  `KUSTOMIZE="/opt/ocp4/bin/kustomize/kustomize build" hack/validate.sh` (passes; checked
+  2026-11-16).
 
 ## Enhancements (open)
 
