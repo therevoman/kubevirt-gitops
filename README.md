@@ -26,7 +26,7 @@ On an OpenShift cluster with OpenShift Virtualization and OpenShift GitOps:
 | `win10`, `win11`, `win2k16`, `win2k19`, `win2k22`, `win2k25` | One Windows version each: build parameters + per-cluster overlays |
 | [datavolumes](datavolumes) | Fedora and CentOS Stream cloud-image DataVolumes |
 | [vms](vms) | Demo Fedora and CentOS VMs cloned from DataSources |
-| [examples](examples) | VirtualMachinePool demos (not deployed by `clusters/`) |
+| [examples](examples) | VirtualMachinePool demos and a Windows example VM per version (not deployed by `clusters/`) |
 | [gitopsservice](gitopsservice) | OpenShift GitOps settings: Argo CD health checks, infra placement, namespaces |
 | [docs](docs) | [Architecture review and improvement tracker](docs/architecture-review.md), [fork survey](docs/upstream-fork-survey.md) |
 

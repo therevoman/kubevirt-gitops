@@ -1,0 +1,23 @@
+# Microsoft Windows 11 example VM, cloned from DataSource win11: oc apply -k examples/windows/win11 -n <namespace>
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+- name: windows-example-settings
+  literals:
+  - BOOT_SOURCE=win11
+  - OS_ID=windows11
+  - DISK_SIZE=64Gi                # same as win11/base/os.env
+  options:
+    disableNameSuffixHash: true
+    annotations:
+      config.kubernetes.io/local-config: "true"
+components:
+- ../base
+# Windows 11 requires TPM 2.0
+patches:
+- target:
+    kind: VirtualMachine
+  patch: |-
+    - op: add
+      path: /spec/template/spec/domain/devices/tpm
+      value: {}

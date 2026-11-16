@@ -154,7 +154,7 @@ The plan, in order:
   `KUSTOMIZE="/opt/ocp4/bin/kustomize/kustomize build" hack/validate.sh` (passes; checked
   2026-11-16).
 
-## Enhancements (open)
+## Enhancements
 
 - [x] **E1 Check a build before publishing it.** After sysprep, `install.sh` boots
   `windows-<OS>-verify`, a throwaway clone of the new disk (`windows-verify-vm.yaml`). Its
@@ -192,7 +192,13 @@ The plan, in order:
     installed.
   - [ ] Not yet checked on a cluster: that the built-in VM/DataVolume checks are present in the
     installed Argo CD (a VM's health in the UI should show Progressing while it starts).
-- [ ] **E4 Example VMs per Windows version.** Clone the DataSource with a sysprep or
-  cloudbase-init volume, to show each image working end to end.
+- [x] **E4 Example VMs per Windows version.** `examples/windows/<version>` (all six) creates
+  `<boot source>-example`, cloned from the DataSource. Its cloudbase-init user data comes from a
+  Secret you create from `user-data.example.yaml`: an administrator account, so no password is in
+  git. A shared Component (`examples/windows/base`) holds the VM; each version sets
+  `BOOT_SOURCE`, `OS_ID` and `DISK_SIZE`, and `win11` adds a TPM. The README shows how to check
+  the guest agent's OS info and log on.
+  - [ ] Not yet run on a cluster. The `users` cloud-config (with `passwd`) is handled by
+    cloudbase-init's UserDataPlugin, which post-install enables.
 - [x] **E5 Per-directory READMEs** for `windows/build` (parameters, how to add a version),
   `examples/` and `vms/`.
