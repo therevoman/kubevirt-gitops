@@ -17,7 +17,9 @@ spec:
       restartPolicy: Never
       containers:
       - name: ose-cli
-        image: registry.redhat.io/openshift4/ose-cli-rhel9:latest
+        # Pinned minor tag (patch releases only). The build uses basic oc commands, so a newer
+        # client works against older clusters. Bump together with the virtio-win fallback in install.sh.
+        image: registry.redhat.io/openshift4/ose-cli-rhel9:v4.22
         command: ["/bin/bash", "/scripts/install.sh"]
         envFrom:
         - configMapRef:

@@ -133,8 +133,10 @@ The plan, in order:
   - `shellcheck windows/build/config/install.sh`
   - PSScriptAnalyzer on `post-install.ps1`
   - a check that every Application `path:` exists
-- [ ] **4.4 Pin images.** The build Job uses `ose-cli-rhel9:latest`; the virtio-win fallback tag
-  is fixed at `v4.22`.
+- [x] **4.4 Pin images.** The build Job uses `ose-cli-rhel9:v4.22` instead of `:latest`; v4.22 was
+  the newest minor tag in the Red Hat catalog on 2026-11-16. The virtio-win fallback in
+  `install.sh` is pinned to the same minor; comments say to bump both together. Normally the
+  virtio-win image comes from the cluster (`openshift-cnv/virtio-win`).
 - [ ] **4.5** Outside this repository: `/opt/ocp4/bin/kustomize/kustomize` is a broken symlink
   (it points at `kustomiz`). Use `oc kustomize` until it is fixed.
 
