@@ -125,14 +125,23 @@ The plan, in order:
   `winXX/base`. The settings ConfigMap is `local-config`, so it isn't applied. All per-cluster
   overlays are now the same 6 lines (base + that Component), and the ocs URL patches are gone.
   Output is byte-identical to `refactor` for all 30 overlays.
-- [ ] **4.3 CI (GitHub Actions):**
-  - `kustomize build` for every directory except `windows/build`, which is a Component and only
-    builds through a `winXX/base`
-  - `kubeconform` with KubeVirt/CDI/Argo CD schemas
-  - `yamllint`
-  - `shellcheck windows/build/config/install.sh`
-  - PSScriptAnalyzer on `post-install.ps1`
-  - a check that every Application `path:` exists
+- [x] **4.3 CI** (`.github/workflows/validate.yaml`, on every push and pull request):
+  - `hack/validate.sh` (also runs locally):
+    - builds every kustomization except Components
+    - checks every Application `path:` and every ApplicationSet directory pattern
+    - renders the Windows templates for each `os.env` (shared `check_params` validation, XML/YAML
+      parse, no placeholders left)
+    - runs `shellcheck`
+  - `yamllint` (`.yamllint.yaml`: real errors only; the templates are checked after rendering)
+  - `kubeconform` against the Kubernetes schemas and the datreeio CRD catalog (KubeVirt, CDI,
+    Argo CD)
+  - `hack/check-powershell.ps1`: parses `post-install.ps1` and each script embedded in it as a
+    here-string, then runs PSScriptAnalyzer at Error severity
+
+  Locally checked: `hack/validate.sh` passes. It fails as it should on a missing parameter, a bad
+  `EDITION` and a leftover placeholder. yamllint is clean.
+  - [ ] Not yet run: the kubeconform and PowerShell steps (neither tool is available on this
+    host). The first CI run will show whether they need tuning.
 - [x] **4.4 Pin images.** The build Job uses `ose-cli-rhel9:v4.22` instead of `:latest`; v4.22 was
   the newest minor tag in the Red Hat catalog on 2026-11-16. The virtio-win fallback in
   `install.sh` is pinned to the same minor; comments say to bump both together. Normally the

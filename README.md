@@ -144,6 +144,13 @@ oc apply -k clusters/snok
 
 Watch the install with `virtctl vnc windows-11-install -n kubevirt-gitops`.
 
+## Checks
+
+`hack/validate.sh` builds every kustomization, checks the Argo CD paths, renders the Windows build
+templates for every version, and runs shellcheck. Run it before pushing. CI
+(`.github/workflows/validate.yaml`) runs it too, plus yamllint, kubeconform and the PowerShell
+checks (`hack/check-powershell.ps1`).
+
 ## Clusters and branches
 
 All per-cluster branches (`sno`, `ocs`, `ocs-old`, `bm`, `win2k22`) were merged into `main` on
