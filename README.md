@@ -78,7 +78,7 @@ winXX/
     kustomization.yaml          # install-iso + params + components: [../../windows/build]
   overlays/
     openshift/                  # generic, no cluster specifics
-    snok/ sno/ ocs/ bm/         # per-cluster patches (today: ISO URL on ocs)
+    snok/ sno/ ocs/ bm/         # base + components: [clusters/<cluster>/windows]
 ```
 
 `os.env` holds what differs between versions: the name key (`OS`), boot-source name, OS label,
@@ -111,8 +111,9 @@ Cluster differences are kept out of the base:
 - **virtio-win**: `install.sh` reads the image from ConfigMap `openshift-cnv/virtio-win`, so it
   always matches the installed OpenShift Virtualization release. Server 2025 needs a release
   with `2k25` drivers.
-- **ISO URL**: defaults to `http://qnas.revoweb.home/isos/...`; an overlay patches it (see
-  `overlays/ocs`).
+- **ISO host**: each `winXX/base` names its ISO file (`http://qnas.revoweb.home/isos/...`).
+  The host comes from `clusters/<cluster>/windows/settings.yaml` (`ISO_HOST`), which every
+  `winXX/overlays/<cluster>` includes. Change a cluster's ISO server in that one file.
 
 The build runs in namespace `kubevirt-gitops` and takes 30-90 minutes or more (most of it Windows Update;
 Server 2016 is the slowest). `install.sh` exits at once if the boot-source PVC already exists;

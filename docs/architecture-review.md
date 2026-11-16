@@ -112,8 +112,11 @@ The plan, in order:
 - [ ] **4.1 ApplicationSet.** A matrix of clusters × Windows versions replaces the 4 × 6
   near-identical Applications in `clusters/*/applications.yaml`. 12 of the 15 overlays per OS
   are an empty `resources: ../../base`; only the ISO host differs, on `ocs`.
-- [ ] **4.2 ISO host per cluster.** Move `qnas.revoweb.home` out of the bases into per-cluster
-  config (one `ISO_BASE_URL`) and keep only the file name per OS.
+- [x] **4.2 ISO host per cluster.** `clusters/<cluster>/windows/` is a Component with one
+  setting, `ISO_HOST`. It replaces the host part of every install ISO URL; the path stays in
+  `winXX/base`. The settings ConfigMap is `local-config`, so it isn't applied. All per-cluster
+  overlays are now the same 6 lines (base + that Component), and the ocs URL patches are gone.
+  Output is byte-identical to `refactor` for all 30 overlays.
 - [ ] **4.3 CI (GitHub Actions):**
   - `kustomize build` for every directory except `windows/build`, which is a Component and only
     builds through a `winXX/base`
