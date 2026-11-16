@@ -10,7 +10,9 @@
 #  - the guest never reports status (Windows Setup stuck before post-install got the guest agent running),
 #  - post-install/stage 2 reports FAILED in C:\Windows\Temp\build-status.txt,
 #  - the status does not change for STALL_MIN minutes,
-#  - the guest shuts down before sysprep started.
+#  - the guest shuts down before sysprep started,
+#  - the image check fails: a throwaway clone of the new disk must boot, start the guest agent and run
+#    cloudbase-init user data before the boot source is published (VERIFY=false skips the check).
 # On a failure the VM is left as it is for debugging; delete the Job and the VM to retry.
 set -u
 
@@ -32,6 +34,8 @@ PRODUCT_KEY=${PRODUCT_KEY:-}
 AGENT_TIMEOUT_MIN=${AGENT_TIMEOUT_MIN:-60}   # VM start -> first status from the guest (Windows Setup + first logon)
 STALL_MIN=${STALL_MIN:-150}                  # longest a single step (e.g. one Windows Update round) may take
 WU_MAX_ROUNDS=${WU_MAX_ROUNDS:-8}            # Windows Update rounds before the build gives up
+VERIFY=${VERIFY:-true}                       # check the new image on a throwaway clone before publishing
+VERIFY_TIMEOUT_MIN=${VERIFY_TIMEOUT_MIN:-30} # clone + first boot (specialize, OOBE, cloudbase-init)
 
 NAME=windows-$OS-install
 ISO_DV=$BOOT_SOURCE-install-iso
@@ -57,7 +61,8 @@ render() {  # <template> <output>: fill every build parameter, fail on any place
   block "$2" DESKTOP "$([ "$EDITION" = desktop ] && echo true || echo false)"
   block "$2" PRODUCT_KEY "$([ -n "$PRODUCT_KEY" ] && echo true || echo false)"
   for v in NAME BOOT_SOURCE ISO_DV OS_ID OS_NAME WORKLOAD EDITION DRIVER_DIR IMAGE_KEY IMAGE_VALUE PRODUCT_KEY DISK_SIZE \
-           WU_MAX_ROUNDS CD_SECRET VIRTIO_WIN_IMAGE BUILD_NAMESPACE; do
+           WU_MAX_ROUNDS CD_SECRET VIRTIO_WIN_IMAGE BUILD_NAMESPACE \
+           VERIFY_NAME VERIFY_SECRET VERIFY_SOURCE_NS VERIFY_SOURCE_PVC; do
     subst "$2" $v "${!v:-}"
   done
   if grep -n '@[A-Z_]*@' "$2"; then log "FAILED: unfilled placeholders in $2"; exit 1; fi
@@ -99,7 +104,10 @@ unset BUILD_PW
 oc create secret generic $CD_SECRET -n $NS --from-file=/tmp/cd --dry-run=client -o yaml | oc apply -f - >/dev/null \
   || { log "cannot create Secret $CD_SECRET"; exit 1; }
 rm -rf /tmp/cd
-trap 'oc delete secret $CD_SECRET -n $NS --ignore-not-found >/dev/null' EXIT
+VERIFY_NAME=windows-$OS-verify
+VERIFY_SECRET=$VERIFY_NAME-userdata
+# Both Secrets are only needed while this Job runs
+trap 'oc delete secret $CD_SECRET $VERIFY_SECRET -n $NS --ignore-not-found >/dev/null' EXIT
 
 render windows-install-vm.yaml /tmp/vm.yaml
 oc apply -n $NS -f /tmp/vm.yaml || { log "cannot create VM $NAME"; exit 1; }
@@ -109,8 +117,11 @@ log "Started VM $NAME"
 START=$(date +%s)
 
 until [ "$(oc get vmi $NAME -n $NS -o jsonpath='{.status.phase}' 2>/dev/null)" = "Running" ]; do sleep 2; done
-POD=$(oc get pod -n $NS -l kubevirt.io/domain=$NAME -o name | head -1)
-DOM=${NS}_$NAME
+attach() {  # <vm>: point vexec, ga and guest_read at that VM's running virt-launcher pod
+  POD=$(oc get pod -n $NS -l kubevirt.io/domain=$1 --field-selector=status.phase=Running -o name | head -1)
+  DOM=${NS}_$1
+}
+attach $NAME
 vexec() { oc exec -n $NS "$POD" -c compute -- "$@"; }
 for n in 1 2 3 4 5; do vexec virsh domstate $DOM >/dev/null 2>&1 && break; sleep 1; done \
   || { log "cannot exec into $POD (SA needs 'use' on SCC kubevirt-controller); the CD boot prompt would time out"; vexec true; exit 1; }
@@ -173,6 +184,56 @@ while :; do
 done
 [[ "$last" == *"sysprep running"* ]] || { log "FAILED: the guest shut down before sysprep started (last status: ${last:-none})"; exit 1; }
 log "Guest shut down after sysprep"
+
+# Image check (E1): boot a throwaway clone of the sysprepped disk, as a template clone would, and
+# pass only when cloudbase-init ran this build's user data, i.e. specialize, OOBE, SetupComplete,
+# the guest agent and cloudbase-init all work. A bad image is never published.
+verify_image() {  # <source namespace> <source PVC>
+  VERIFY_SOURCE_NS=$1 VERIFY_SOURCE_PVC=$2
+  local nonce got st t0 agent=""
+  nonce=$(tr -dc 'a-z0-9' </dev/urandom | head -c 16)
+  # A check VM left by an earlier failed build is replaced
+  oc delete vm $VERIFY_NAME -n $NS --ignore-not-found --wait=true >/dev/null
+  oc delete dv $VERIFY_NAME-rootdisk -n $NS --ignore-not-found --wait=true >/dev/null
+  oc create secret generic $VERIFY_SECRET -n $NS --dry-run=client -o yaml --from-literal=userdata="#ps1_sysnative
+Set-Content -Path C:\\Windows\\Temp\\image-check.txt -Value 'image-check $nonce' -Encoding ASCII" | oc apply -f - >/dev/null \
+    || { log "FAILED: cannot create Secret $VERIFY_SECRET"; exit 1; }
+  render windows-verify-vm.yaml /tmp/verify-vm.yaml
+  oc apply -n $NS -f /tmp/verify-vm.yaml >/dev/null || { log "FAILED: cannot create VM $VERIFY_NAME"; exit 1; }
+  log "Image check: booting $VERIFY_NAME, a clone of $1/$2 (up to $VERIFY_TIMEOUT_MIN min)"
+  t0=$(date +%s); POD=""
+  while :; do
+    if [ $(($(date +%s) - t0)) -gt $((VERIFY_TIMEOUT_MIN * 60)) ]; then
+      if [ -z "$agent" ]; then log "FAILED: image check: the guest agent never answered (check the $VERIFY_NAME console)"
+      else
+        log "FAILED: image check: cloudbase-init did not run the user data. Last lines of its log:"
+        guest_read "C:/Program Files/Cloudbase Solutions/Cloudbase-Init/log/cloudbase-init.log" 3000 | tail -25
+      fi
+      log "VM $VERIFY_NAME is left for debugging; the boot source was not published"
+      exit 1
+    fi
+    case "$(oc get vmi $VERIFY_NAME -n $NS -o jsonpath='{.status.phase}' 2>/dev/null)" in
+      Running) ;;
+      Succeeded|Failed) log "FAILED: image check: $VERIFY_NAME stopped during its first boot"; exit 1 ;;
+      *) sleep 15; continue ;;   # still cloning the disk or scheduling
+    esac
+    [ -n "$POD" ] || attach $VERIFY_NAME
+    if [ -z "$agent" ] && ga '{"execute":"guest-ping"}' | grep -q return; then
+      agent=1; log "Image check: guest agent answering after $((($(date +%s) - t0) / 60)) min"
+    fi
+    if [ -n "$agent" ]; then
+      got=$(guest_read C:/Windows/Temp/image-check.txt | head -1)
+      [ "$got" = "image-check $nonce" ] && break
+    fi
+    sleep 15
+  done
+  st=$(($(date +%s) - t0))
+  log "Image check passed in $((st / 60)) min: the clone booted and cloudbase-init ran its user data"
+  oc delete vm $VERIFY_NAME -n $NS --wait=false >/dev/null   # its DataVolume goes with it
+  oc delete secret $VERIFY_SECRET -n $NS --ignore-not-found >/dev/null
+}
+if [ "$VERIFY" = true ]; then verify_image $NS $NAME-rootdisk
+else log "VERIFY=$VERIFY: skipping the image check"; fi
 
 render clone-boot-source.yaml /tmp/clone.yaml
 oc apply -f /tmp/clone.yaml || { log "cannot create DataVolume $IMAGES_NS/$BOOT_SOURCE"; exit 1; }

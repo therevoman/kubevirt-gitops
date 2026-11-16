@@ -33,10 +33,24 @@ ConfigMap through `envFrom`.
 | `STALL_MIN` | `150` | Fail when the build status doesn't change for this long |
 | `WU_MAX_ROUNDS` | `8` | Windows Update rounds before the build gives up |
 | `AGENT_TIMEOUT_MIN` | `60` (default) | VM start to first status from the guest |
+| `VERIFY` | `true` (default) | Check the image on a throwaway clone before publishing it (see below) |
+| `VERIFY_TIMEOUT_MIN` | `30` (default) | Time the check clone has to boot and run cloudbase-init |
+
+## Image check before publishing
+
+After sysprep shuts the build VM down, `install.sh` boots `windows-<OS>-verify`, a throwaway
+clone of the new disk (`windows-verify-vm.yaml`), the way a template clone boots. Its cloud-init
+volume carries user data that writes a random token to `C:\Windows\Temp\image-check.txt`; the
+check passes when the guest agent returns that token. That proves specialize, OOBE, SetupComplete,
+the guest agent and cloudbase-init all work. Only then is the disk cloned to the boot source.
+
+On a failure the Job exits non-zero and prints the tail of the cloudbase-init log. The check VM
+is left for debugging, and the boot source is not touched. The next build replaces the check VM.
 
 ## Templates
 
-`install.sh` renders `windows-install-vm.yaml`, `clone-boot-source.yaml` and `autounattend.xml`.
+`install.sh` renders `windows-install-vm.yaml`, `windows-verify-vm.yaml`, `clone-boot-source.yaml`
+and `autounattend.xml`.
 It replaces each at-sign placeholder with the parameter of that name and keeps or drops the lines
 between `IF_<BLOCK>`/`END_<BLOCK>` markers (`TPM`, `DESKTOP`, `PRODUCT_KEY`). Rendering fails if
 any placeholder is left. Don't write a marker name inside an ordinary comment: `install.sh` would

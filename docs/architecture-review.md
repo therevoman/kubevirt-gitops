@@ -156,9 +156,15 @@ The plan, in order:
 
 ## Enhancements (open)
 
-- [ ] **E1 Check a build before publishing it.** Boot a throwaway clone of the new disk, wait for
-  the guest agent and cloudbase-init, and only then point the DataSource at it. This keeps a
-  bad sysprep away from the templates.
+- [x] **E1 Check a build before publishing it.** After sysprep, `install.sh` boots
+  `windows-<OS>-verify`, a throwaway clone of the new disk (`windows-verify-vm.yaml`). Its
+  cloud-init user data writes a random token to a file; the check passes when the guest agent
+  reads that token back. That covers specialize, OOBE, SetupComplete, the guest agent and
+  cloudbase-init. Only then is the disk cloned to the boot source, so a bad sysprep never reaches
+  the templates. `VERIFY=false` in `os.env` skips it; `VERIFY_TIMEOUT_MIN` (30) bounds it.
+  - [ ] Not yet run on a cluster. The check VM boots on SATA like the build VM; the
+    `#ps1_sysnative` user data relies on cloudbase-init's UserDataPlugin and the NoCloud service,
+    which post-install enables.
 - [ ] **E2 Monthly patched images.** Build into dated PVCs (`win11-2026-12`) and switch the
   DataSource when E1 passes, via a CronJob or a scheduled sync. Today a boot source is never
   rebuilt once its PVC exists.
