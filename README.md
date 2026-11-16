@@ -85,7 +85,7 @@ winXX/
 desktop or server edition, virtio-win driver folder, image selector (`/IMAGE/NAME` for desktop,
 `/IMAGE/INDEX` 2 for Server with Desktop Experience), generic product key, TPM, disk size and
 Windows Update limits. To add a version, copy a `winXX/` directory, edit `os.env` and
-`install-iso.yaml`, and add an Application to each `clusters/<cluster>/applications.yaml`.
+`install-iso.yaml`; the ApplicationSets pick up its `overlays/<cluster>` directories.
 
 What every build does:
 
@@ -128,10 +128,19 @@ oc logs -f job/windows-11-install -n kubevirt-gitops
 ```
 
 or with `make windows-boot-source WIN=win2k25` in `agent/snok`, or via Argo CD with the
-per-cluster app-of-apps in [clusters](clusters): `oc apply -k clusters/snok` creates one
-`snok-<version>-boot-source` Application per Windows version, tracking `main`. Sync is manual.
-The Job is a `PostSync` hook, so it runs after every sync and is a no-op once the boot source
-exists.
+per-cluster app-of-apps in [clusters](clusters). `oc apply -k clusters/snok` creates the
+ApplicationSet `snok-windows-boot-sources`. It generates one `snok-<version>-boot-source`
+Application for every `win*/overlays/snok` directory, tracking `main`. Sync is manual. The Job
+is a `PostSync` hook, so it runs after every sync and is a no-op once the boot source exists.
+
+Moving a cluster from the old per-version Applications to the ApplicationSet: delete the old
+Applications first. They have no `resources-finalizer`, so this keeps every build and boot source.
+The ApplicationSet then creates them again under the same names:
+
+```
+oc delete application -n openshift-gitops $(oc get application -n openshift-gitops -o name | grep -E '/snok-win[0-9k]+-boot-source$' | cut -d/ -f2)
+oc apply -k clusters/snok
+```
 
 Watch the install with `virtctl vnc windows-11-install -n kubevirt-gitops`.
 
@@ -139,5 +148,8 @@ Watch the install with `virtctl vnc windows-11-install -n kubevirt-gitops`.
 
 All per-cluster branches (`sno`, `ocs`, `ocs-old`, `bm`, `win2k22`) were merged into `main` on
 2026-11-07. Cluster differences now live in `overlays/<cluster>` directories, and
-`clusters/<cluster>` holds that cluster's Applications. Add a cluster by adding an overlay to
-each Windows version and a `clusters/<name>` directory; don't create a branch.
+`clusters/<cluster>` holds that cluster's ApplicationSet and Windows settings. To add a cluster:
+- copy a `clusters/<name>` directory and change the name and `ISO_HOST`
+- add `winXX/overlays/<name>` for each Windows version
+
+Don't create a branch.
