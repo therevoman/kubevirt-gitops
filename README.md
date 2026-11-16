@@ -31,7 +31,6 @@ More in-depth descriptions may be found in the [README](setup/)
 | [datavolumes](datavolumes) | Fedora and CentOS Stream cloud-image DataVolumes |
 | [vms](vms) | Demo Fedora and CentOS VMs cloned from DataSources |
 | [examples](examples) | VirtualMachinePool demos (not deployed by `clusters/`) |
-| [virtualization](virtualization) | 2022 OLM install of OpenShift Virtualization (unused; see the tracker) |
 | [setup](setup), [gitopsservice](gitopsservice) | Argo CD helper scripts and health checks |
 | [docs](docs) | [Architecture review and improvement tracker](docs/architecture-review.md), [fork survey](docs/upstream-fork-survey.md) |
 

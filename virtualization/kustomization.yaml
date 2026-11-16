@@ -1,6 +1,0 @@
-resources:
-- namespaces.yaml
-- operatorgroup.yaml
-- subscription.yaml
-- hyperconverged.yaml
-- gitops-rbac.yaml

@@ -30,23 +30,23 @@ The plan, in order:
   pinned to `v4.10`. `clusters/<cluster>` (manual sync from `main`) is how the repository is used
   today. Removed: `apps/`, `kubevirt/`, `cdi/`, `hpp/`, `cert-manager/`, and the `kubernetes`
   overlays of `vms/` and `datavolumes/`. `clusters/` is now the only Argo CD entry point.
-- [~] **1.3 Credentials in git.**
+- [x] **1.3 Credentials in git.**
   - [x] win2k19/win2k22 hard-coded the Administrator password `R3dh4t1!`. They now use the
     shared build (step 2), which sets a random password for each build and never stores it.
   - [x] `vms/` carried plaintext passwords and an SSH key that belongs to nobody on this
     project (from upstream). Now an SSH public key comes from a Secret you create
     (`accessCredentials`), and there are no passwords.
-  - [ ] `examples/` (pool demos) keep their demo passwords (`redhat`, `EXAMPLE`) and a lab SSH
-    key. They are labeled demo-only in `examples/README.md`. Open: move them to generated
-    Secrets if the demos are ever used outside the lab.
+  - `examples/` (pool demos) keep their demo passwords (`redhat`, `EXAMPLE`) and a lab SSH
+    key, by decision (2026-11-16). They are labeled demo-only in `examples/README.md`.
 - [x] **1.4 Leftovers.**
   - Moved the five pool demos to `examples/`: `pool-of-vms`, `pool-of-fedoras`, `vmpools`,
     `virtualmachinepool`, `win2k19virtualmachinepool`.
   - Deleted the broken `test.sh`, and the `servicemesh/` (2022) and `acm/` directories.
-- [ ] **1.5 `virtualization/`** still holds the 2022 OLM install of OpenShift Virtualization
-  (`startingCSV: v4.10`). Nothing references it anymore: clusters install OpenShift
-  Virtualization from the snok post-install GitOps. Decide whether to delete it or refresh it.
-  Its `namespaces.yaml` (`kubevirt-gitops` with the `managed-by` label) may be worth keeping.
+- [x] **1.5 `virtualization/` removed.** It held the 2022 OLM install of OpenShift
+  Virtualization (`startingCSV: v4.10`) and nothing referenced it: clusters install OpenShift
+  Virtualization from the snok post-install GitOps. Its namespaces (`kubevirt-gitops`,
+  `openshift-cnv`, `openshift-virtualization-os-images` with the `managed-by` label) are also in
+  `gitopsservice/`.
 
 ## Step 2: shared Windows build
 
