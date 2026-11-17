@@ -180,6 +180,9 @@ The plan, in order:
     The environment's `ISO_BASE_URL` (replacing `ISO_HOST`) replaces everything before
     `/windows/`, so an environment sets the server and a path prefix
     (`http://qnas.revoweb.home/isos` for `default`).
+  - All ISOs live under `/isos/windows/`. win10 and win11 now use the files there,
+    `win-10-22h2.iso` and `win-11-25h2.iso`, instead of `Windows10-22H2.iso` and
+    `Win11_25H2_English_x64.iso` at the top of `/isos/`. All six URLs return 200.
   - Migration on a cluster: delete `<cluster>-windows-boot-sources`, apply
     `environments/default`, sync (README).
 - [x] **4.3 CI** (`.github/workflows/validate.yaml`, on every push and pull request):
