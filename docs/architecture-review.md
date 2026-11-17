@@ -109,23 +109,50 @@ The plan, in order:
 
 ## Step 4: delivery and quality (open)
 
-- [ ] **4.1 ApplicationSet.** A matrix of clusters × Windows versions replaces the 4 × 6
-  near-identical Applications in `clusters/*/applications.yaml`. 12 of the 15 overlays per OS
-  are an empty `resources: ../../base`; only the ISO host differs, on `ocs`.
-- [ ] **4.2 ISO host per cluster.** Move `qnas.revoweb.home` out of the bases into per-cluster
-  config (one `ISO_BASE_URL`) and keep only the file name per OS.
-- [ ] **4.3 CI (GitHub Actions):**
-  - `kustomize build` for every directory except `windows/build`, which is a Component and only
-    builds through a `winXX/base`
-  - `kubeconform` with KubeVirt/CDI/Argo CD schemas
-  - `yamllint`
-  - `shellcheck windows/build/config/install.sh`
-  - PSScriptAnalyzer on `post-install.ps1`
-  - a check that every Application `path:` exists
-- [ ] **4.4 Pin images.** The build Job uses `ose-cli-rhel9:latest`; the virtio-win fallback tag
-  is fixed at `v4.22`.
-- [ ] **4.5** Outside this repository: `/opt/ocp4/bin/kustomize/kustomize` is a broken symlink
-  (it points at `kustomiz`). Use `oc kustomize` until it is fixed.
+- [x] **4.1 ApplicationSet.** `clusters/base/windows-boot-sources.yaml` is an ApplicationSet
+  with a matrix generator: the cluster (set per cluster with one patch) × a git directory
+  generator over `win*/overlays/<cluster>`. It replaces the 24 hand-written Applications, and a
+  new Windows version needs no Application edit.
+  - Generated names are the same as before (`<cluster>-<version>-boot-source`), checked for all
+    4 clusters.
+  - `preserveResourcesOnDeletion: true` keeps boot sources if the ApplicationSet or a version
+    is removed.
+  - Migration: delete a cluster's old Applications before applying (README, "Run one directly").
+  - [ ] Not yet checked on a live Argo CD. It needs goTemplate and matrix-parameter support
+    (Argo CD 2.5+).
+- [x] **4.2 ISO host per cluster.** `clusters/<cluster>/windows/` is a Component with one
+  setting, `ISO_HOST`. It replaces the host part of every install ISO URL; the path stays in
+  `winXX/base`. The settings ConfigMap is `local-config`, so it isn't applied. All per-cluster
+  overlays are now the same 6 lines (base + that Component), and the ocs URL patches are gone.
+  Output is byte-identical to `refactor` for all 30 overlays.
+- [x] **4.3 CI** (`.github/workflows/validate.yaml`, on every push and pull request):
+  - `hack/validate.sh` (also runs locally):
+    - builds every kustomization except Components
+    - checks every Application `path:` and every ApplicationSet directory pattern
+    - renders the Windows templates for each `os.env` (shared `check_params` validation, XML/YAML
+      parse, no placeholders left)
+    - runs `shellcheck`
+  - `yamllint` (`.yamllint.yaml`: real errors only; the templates are checked after rendering)
+  - `kubeconform` against the Kubernetes schemas and the datreeio CRD catalog (KubeVirt, CDI,
+    Argo CD)
+  - `hack/check-powershell.ps1`: parses `post-install.ps1` and each script embedded in it as a
+    here-string, then runs PSScriptAnalyzer at Error severity
+
+  Locally checked: `hack/validate.sh` passes. It fails as it should on a missing parameter, a bad
+  `EDITION` and a leftover placeholder. yamllint is clean.
+  - [ ] Not yet run: the kubeconform and PowerShell steps (neither tool is available on this
+    host). The first CI run will show whether they need tuning.
+- [x] **4.4 Pin images.** The build Job uses `ose-cli-rhel9:v4.22` instead of `:latest`; v4.22 was
+  the newest minor tag in the Red Hat catalog on 2026-11-16. The virtio-win fallback in
+  `install.sh` is pinned to the same minor; comments say to bump both together. Normally the
+  virtio-win image comes from the cluster (`openshift-cnv/virtio-win`).
+- [x] **4.5 Local kustomize (outside this repository).** Correction to the review: the symlink is
+  fine. The review misread truncated `ls` output. The binary is
+  `/opt/ocp4/bin/kustomize/kustomize` (v5.8.3). `/opt/ocp4/bin/kustomize` is a directory, so
+  `kustomize` through `PATH=/opt/ocp4/bin` fails with "permission denied". Nothing changed in
+  `bin/`. To use it, add `/opt/ocp4/bin/kustomize` to `PATH`, or run
+  `KUSTOMIZE="/opt/ocp4/bin/kustomize/kustomize build" hack/validate.sh` (passes; checked
+  2026-11-16).
 
 ## Enhancements (open)
 

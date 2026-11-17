@@ -16,9 +16,18 @@ set -u
 
 log() { echo "$(date -u +%H:%M:%S) $*"; }
 
-for v in OS BOOT_SOURCE OS_ID OS_NAME WORKLOAD EDITION DRIVER_DIR IMAGE_KEY IMAGE_VALUE TPM DISK_SIZE; do
-  [ -n "${!v:-}" ] || { log "FAILED: parameter $v is not set (ConfigMap windows-<OS>-install-params, from winXX/base/os.env)"; exit 1; }
-done
+# Required parameters, and the values the templates understand (hack/validate.sh runs this too)
+check_params() {
+  local v
+  for v in OS BOOT_SOURCE OS_ID OS_NAME WORKLOAD EDITION DRIVER_DIR IMAGE_KEY IMAGE_VALUE TPM DISK_SIZE; do
+    [ -n "${!v:-}" ] || { log "FAILED: parameter $v is not set (ConfigMap windows-<OS>-install-params, from winXX/base/os.env)"; exit 1; }
+  done
+  case "$EDITION" in desktop|server) ;; *) log "FAILED: EDITION must be desktop or server, not '$EDITION'"; exit 1 ;; esac
+  case "$TPM" in true|false) ;; *) log "FAILED: TPM must be true or false, not '$TPM'"; exit 1 ;; esac
+  case "$IMAGE_KEY" in /IMAGE/NAME|/IMAGE/INDEX) ;; *) log "FAILED: IMAGE_KEY must be /IMAGE/NAME or /IMAGE/INDEX"; exit 1 ;; esac
+  [[ "$DISK_SIZE" =~ ^[0-9]+Gi$ ]] || { log "FAILED: DISK_SIZE must look like 60Gi, not '$DISK_SIZE'"; exit 1; }
+}
+check_params
 PRODUCT_KEY=${PRODUCT_KEY:-}
 AGENT_TIMEOUT_MIN=${AGENT_TIMEOUT_MIN:-60}   # VM start -> first status from the guest (Windows Setup + first logon)
 STALL_MIN=${STALL_MIN:-150}                  # longest a single step (e.g. one Windows Update round) may take
@@ -66,7 +75,8 @@ oc wait dv/$ISO_DV -n $NS --for=condition=Ready --timeout=3600s || { log "ISO im
 curl -sfk http://hyperconverged-cluster-cli-download.openshift-cnv.svc.cluster.local:8080/amd64/linux/virtctl.tar.gz -o /tmp/virtctl.tar.gz \
   && tar -xzf /tmp/virtctl.tar.gz -C /tmp/ || { log "virtctl download failed"; exit 1; }
 
-# virtio-win image matching this CNV release (falls back to a release tag if the CM is not readable)
+# virtio-win image matching this CNV release. The fallback (when the CM is not readable) is pinned to
+# the same minor release as the Job's ose-cli image; bump them together.
 VIRTIO_WIN_IMAGE=$(oc get cm virtio-win -n openshift-cnv -o jsonpath='{.data.virtio-win-image}' 2>/dev/null)
 VIRTIO_WIN_IMAGE=${VIRTIO_WIN_IMAGE:-registry.redhat.io/container-native-virtualization/virtio-win-rhel9:v4.22}
 log "virtio-win image: $VIRTIO_WIN_IMAGE"

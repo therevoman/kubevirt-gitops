@@ -78,14 +78,14 @@ winXX/
     kustomization.yaml          # install-iso + params + components: [../../windows/build]
   overlays/
     openshift/                  # generic, no cluster specifics
-    snok/ sno/ ocs/ bm/         # per-cluster patches (today: ISO URL on ocs)
+    snok/ sno/ ocs/ bm/         # base + components: [clusters/<cluster>/windows]
 ```
 
 `os.env` holds what differs between versions: the name key (`OS`), boot-source name, OS label,
 desktop or server edition, virtio-win driver folder, image selector (`/IMAGE/NAME` for desktop,
 `/IMAGE/INDEX` 2 for Server with Desktop Experience), generic product key, TPM, disk size and
 Windows Update limits. To add a version, copy a `winXX/` directory, edit `os.env` and
-`install-iso.yaml`, and add an Application to each `clusters/<cluster>/applications.yaml`.
+`install-iso.yaml`; the ApplicationSets pick up its `overlays/<cluster>` directories.
 
 What every build does:
 
@@ -111,8 +111,9 @@ Cluster differences are kept out of the base:
 - **virtio-win**: `install.sh` reads the image from ConfigMap `openshift-cnv/virtio-win`, so it
   always matches the installed OpenShift Virtualization release. Server 2025 needs a release
   with `2k25` drivers.
-- **ISO URL**: defaults to `http://qnas.revoweb.home/isos/...`; an overlay patches it (see
-  `overlays/ocs`).
+- **ISO host**: each `winXX/base` names its ISO file (`http://qnas.revoweb.home/isos/...`).
+  The host comes from `clusters/<cluster>/windows/settings.yaml` (`ISO_HOST`), which every
+  `winXX/overlays/<cluster>` includes. Change a cluster's ISO server in that one file.
 
 The build runs in namespace `kubevirt-gitops` and takes 30-90 minutes or more (most of it Windows Update;
 Server 2016 is the slowest). `install.sh` exits at once if the boot-source PVC already exists;
@@ -127,16 +128,35 @@ oc logs -f job/windows-11-install -n kubevirt-gitops
 ```
 
 or with `make windows-boot-source WIN=win2k25` in `agent/snok`, or via Argo CD with the
-per-cluster app-of-apps in [clusters](clusters): `oc apply -k clusters/snok` creates one
-`snok-<version>-boot-source` Application per Windows version, tracking `main`. Sync is manual.
-The Job is a `PostSync` hook, so it runs after every sync and is a no-op once the boot source
-exists.
+per-cluster app-of-apps in [clusters](clusters). `oc apply -k clusters/snok` creates the
+ApplicationSet `snok-windows-boot-sources`. It generates one `snok-<version>-boot-source`
+Application for every `win*/overlays/snok` directory, tracking `main`. Sync is manual. The Job
+is a `PostSync` hook, so it runs after every sync and is a no-op once the boot source exists.
+
+Moving a cluster from the old per-version Applications to the ApplicationSet: delete the old
+Applications first. They have no `resources-finalizer`, so this keeps every build and boot source.
+The ApplicationSet then creates them again under the same names:
+
+```
+oc delete application -n openshift-gitops $(oc get application -n openshift-gitops -o name | grep -E '/snok-win[0-9k]+-boot-source$' | cut -d/ -f2)
+oc apply -k clusters/snok
+```
 
 Watch the install with `virtctl vnc windows-11-install -n kubevirt-gitops`.
+
+## Checks
+
+`hack/validate.sh` builds every kustomization, checks the Argo CD paths, renders the Windows build
+templates for every version, and runs shellcheck. Run it before pushing. CI
+(`.github/workflows/validate.yaml`) runs it too, plus yamllint, kubeconform and the PowerShell
+checks (`hack/check-powershell.ps1`).
 
 ## Clusters and branches
 
 All per-cluster branches (`sno`, `ocs`, `ocs-old`, `bm`, `win2k22`) were merged into `main` on
 2026-11-07. Cluster differences now live in `overlays/<cluster>` directories, and
-`clusters/<cluster>` holds that cluster's Applications. Add a cluster by adding an overlay to
-each Windows version and a `clusters/<name>` directory; don't create a branch.
+`clusters/<cluster>` holds that cluster's ApplicationSet and Windows settings. To add a cluster:
+- copy a `clusters/<name>` directory and change the name and `ISO_HOST`
+- add `winXX/overlays/<name>` for each Windows version
+
+Don't create a branch.
