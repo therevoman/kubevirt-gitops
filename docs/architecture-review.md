@@ -158,7 +158,7 @@ The plan, in order:
       `argocd.argoproj.io/managed-by=openshift-gitops`. Without the label on `kubevirt-gitops`
       and `openshift-virtualization-os-images`, syncs stayed `Running` with nothing applied.
     - The application controller's default 2Gi limit was OOMKilled on snok (about 640 CRDs);
-      it uses about 2.3Gi after the syncs. Raised to 6Gi.
+      it uses about 2.3Gi after the syncs. `gitopsservice/health` now sets a 6Gi limit.
   - Removed the unused `win*/overlays/openshift` (no cluster's ApplicationSet picks them up) and
     the orphaned `datavolumes/overlays/openshift/application.yaml` left from the old `apps/`
     entry point.

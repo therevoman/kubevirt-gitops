@@ -1,5 +1,6 @@
-# Argo CD health checks for KubeVirt kinds, as configuration of the OpenShift GitOps operator
-# (ArgoCD openshift-gitops, spec.resourceHealthChecks). Apply with: oc apply -k gitopsservice/health
+# Settings of the OpenShift GitOps operator's instance (ArgoCD openshift-gitops): Argo CD health
+# checks for KubeVirt kinds (spec.resourceHealthChecks) and the application controller's memory
+# (spec.controller.resources). Apply with: oc apply -k gitopsservice/health
 # This sets the whole resourceHealthChecks list of that ArgoCD instance.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization

@@ -12,8 +12,9 @@ the default leans to OpenShift products and namespaces.
 
 On an OpenShift cluster with OpenShift Virtualization and OpenShift GitOps:
 
-1. Add the Argo CD health checks for KubeVirt kinds to the GitOps operator's instance:
-   `oc apply -k gitopsservice/health` (see [gitopsservice](gitopsservice/README.md)).
+1. Configure the GitOps operator's instance: Argo CD health checks for KubeVirt kinds and a 6Gi
+   memory limit for the application controller (the default 2Gi gets OOMKilled on clusters with
+   many CRDs): `oc apply -k gitopsservice/health` (see [gitopsservice](gitopsservice/README.md)).
 2. Let that instance manage the two namespaces the builds write to. The default `openshift-gitops`
    instance can read the whole cluster but only write where a namespace carries its
    `managed-by` label; without it, syncs hang on the first Job, CronJob or DataVolume:
@@ -26,8 +27,6 @@ On an OpenShift cluster with OpenShift Virtualization and OpenShift GitOps:
    The GitOps operator then gives the instance's application controller full rights in those
    namespaces. It needs them for the build's RoleBindings to `admin` and
    `os-images.kubevirt.io:edit` too: Kubernetes only lets it bind roles whose permissions it holds.
-   On a cluster with many CRDs, also raise the controller's memory limit; the default 2Gi gets
-   OOMKilled (see [gitopsservice](gitopsservice/README.md#controller-memory)).
 3. Create the cluster's app-of-apps: `oc apply -k clusters/<cluster>` (see
    [Microsoft Windows boot sources](#microsoft-windows-boot-sources)).
 
