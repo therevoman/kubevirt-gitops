@@ -49,6 +49,28 @@ the guest agent and cloudbase-init all work. Only then is the disk cloned to the
 On a failure the Job exits non-zero and prints the tail of the cloudbase-init log. The check VM
 is left for debugging, and the boot source is not touched. The next build replaces the check VM.
 
+## Install ISO and the guest filesystem alert
+
+Once Setup has finished (the first status line from post-install), `install.sh` ejects the install
+ISO with `virsh change-media --eject --live`. The build VM keeps an empty CD drive, and the
+VM spec does not change. Nothing reads the ISO after Setup: post-install runs from the scripts CD,
+and drivers come from the virtio-win CD.
+
+The eject keeps a false alarm away. A mounted DVD reports a 100% full filesystem, and Windows
+reports the ISO's file system type as `UDF`. KubeVirt's `GuestFilesystemAlmostOutOfSpace` rule
+skips CD filesystems, but its regex is case-sensitive and lists only `udf`. Without the eject, the
+alert fires (critical) for the build VM's `D:\` for the whole build, which looks like the cluster
+is running out of disk. The CDFS volumes (virtio-win, scripts CD) are already skipped.
+
+If the job logs "could not eject the install ISO", expect that alert until the build VM is
+deleted. To silence it, match `alertname=GuestFilesystemAlmostOutOfSpace`,
+`namespace=kubevirt-gitops`, `file_system_type=UDF`. A Windows VM's real disks are NTFS, so the
+silence doesn't hide them.
+
+KubeVirt's declarative hotplug can't do this: removing the volume from the VM spec only marks the
+VM RestartRequired. A CD-ROM can only be ejected live if its volume was hotplugged, and the build
+boots from this ISO.
+
 ## Builds, monthly rebuilds and rollback
 
 Every build ends the same way:
