@@ -9,7 +9,7 @@ metadata:
 spec:
   source:
     http:
-      url: http://webserver.example.com/windows/win-11-25h2.iso     # environments/<env>/windows replaces http://webserver.example.com
+      url: http://webserver.example.com/windows/win-11-25h2.iso     # the environment's ISO_BASE_URL replaces http://webserver.example.com (windows/environment)
   storage:
     resources:
       requests:

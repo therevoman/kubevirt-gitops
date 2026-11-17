@@ -27,20 +27,18 @@ On an OpenShift cluster with OpenShift Virtualization and OpenShift GitOps:
    The GitOps operator then gives the instance's application controller full rights in those
    namespaces. It needs them for the build's RoleBindings to `admin` and
    `os-images.kubevirt.io:edit` too: Kubernetes only lets it bind roles whose permissions it holds.
-3. Create the environment's app-of-apps: `oc apply -k environments/default` (see
-   [Microsoft Windows boot sources](#microsoft-windows-boot-sources) and
-   [Environments](#environments)).
+3. Deploy the boot sources from your environment's config repository, which holds the overlays
+   and the ApplicationSet (see [Deploying from a config repo](#deploying-from-a-config-repo)).
 
 ## Repository layout
 
 | Path | What it is |
 |---|---|
-| [environments](environments) | Per-environment app-of-apps and settings (`oc apply -k environments/<environment>`): the only Argo CD entry point |
 | [windows/build](windows/build) | Shared Windows boot-source build (Kustomize Component) |
-| `win10`, `win11`, `win2k16`, `win2k19`, `win2k22`, `win2k25` | One Windows version each: build parameters + one overlay per environment |
+| `win10`, `win11`, `win2k16`, `win2k19`, `win2k22`, `win2k25` | One Windows version each: build parameters (`base/`); environments add their overlays from a config repo |
 | [datavolumes](datavolumes) | Fedora and CentOS Stream cloud-image DataVolumes |
 | [vms](vms) | Demo Fedora and CentOS VMs cloned from DataSources |
-| [examples](examples) | VirtualMachinePool demos and a Windows example VM per version (not deployed by `environments/`) |
+| [examples](examples) | VirtualMachinePool demos and a Windows example VM per version and an example environment (`examples/environment`) |
 | [gitopsservice](gitopsservice) | OpenShift GitOps settings: Argo CD health checks, namespace label, controller memory, infra placement |
 | [docs](docs) | [Architecture review and improvement tracker](docs/architecture-review.md), [fork survey](docs/upstream-fork-survey.md) |
 
@@ -75,6 +73,7 @@ parameters:
 windows/build/                  # Kustomize Component, shared by every version
   windows-install-{sa,rbac,job}.yaml
   windows-rebuild-cronjob.yaml  # monthly rebuild (suspended unless the environment turns it on)
+windows/environment/            # Kustomize Component: an environment's ISO_BASE_URL -> ISO URLs
   config/                       # -> ConfigMap windows-<OS>-install-scripts
     install.sh                  #    build, check, store, publish (Job and CronJob)
     windows-install-vm.yaml     #    build VM template (@PLACEHOLDERS@ filled from os.env)
@@ -87,15 +86,14 @@ winXX/
     os.env                      # this version's parameters -> ConfigMap windows-<OS>-install-params
     install-iso.yaml            # DataVolume importing the install ISO over HTTP
     kustomization.yaml          # install-iso + params + components: [../../windows/build]
-  overlays/
-    default/                    # base + components: [environments/default/windows]
+examples/environment/           # an example environment: settings/ + overlays/winXX
 ```
 
 `os.env` holds what differs between versions: the name key (`OS`), boot-source name, OS label,
 desktop or server edition, virtio-win driver folder, image selector (`/IMAGE/NAME` for desktop,
 `/IMAGE/INDEX` 2 for Server with Desktop Experience), generic product key, TPM, disk size and
 Windows Update limits. To add a version, copy a `winXX/` directory, edit `os.env` and
-`install-iso.yaml`; the ApplicationSet picks up its `overlays/<environment>` directory.
+`install-iso.yaml`; environments add an overlay for it in their config repo.
 
 What every build does:
 
@@ -127,40 +125,25 @@ Cluster and environment differences are kept out of the base:
   always matches the installed OpenShift Virtualization release. Server 2025 needs a release
   with `2k25` drivers.
 - **ISO server**: each `winXX/base` names its ISO file under a placeholder,
-  `http://webserver.example.com/windows/<file>`. `ISO_BASE_URL` in
-  `environments/<environment>/windows/settings.yaml` replaces `http://webserver.example.com`, so
-  the ISOs must be at `<ISO_BASE_URL>/windows/<file>`. Every `winXX/overlays/<environment>`
-  includes it. Change an environment's ISO server in that one file.
+  `http://webserver.example.com/windows/<file>`. The environment's `ISO_BASE_URL` replaces
+  `http://webserver.example.com` (Component `windows/environment`), so the ISOs must be at
+  `<ISO_BASE_URL>/windows/<file>`.
 
 The build runs in namespace `kubevirt-gitops` and takes 30-90 minutes or more (most of it Windows Update;
 Server 2016 is the slowest). The Job exits at once if the boot-source PVC already exists.
 Monthly patched images come from CronJob `windows-<OS>-rebuild`, which an environment turns on in
-`environments/<environment>/windows/kustomization.yaml`; see [windows/build](windows/build/README.md).
+its settings; see [windows/build](windows/build/README.md).
 
 Run one directly:
 
 ```
 oc create namespace kubevirt-gitops
-oc apply -k win11/overlays/default
+oc apply -k <config repo>/kubevirt-windows/default/overlays/win11    # or examples/environment/overlays/win11 with your ISO_BASE_URL
 oc logs -f job/windows-11-install -n kubevirt-gitops
 ```
 
-or via Argo CD with the environment's app-of-apps in [environments](environments).
-`oc apply -k environments/default` creates the ApplicationSet `default-windows-boot-sources`. It
-generates one `default-<version>-boot-source` Application for every `win*/overlays/default`
-directory, tracking `main`. Sync is manual. The Job is a `PostSync` hook, so it runs after every
-sync and is a no-op once the boot source exists.
-
-Moving a cluster from the old per-cluster ApplicationSet (`clusters/<cluster>`,
-`<cluster>-windows-boot-sources`): delete it first, so two sets of Applications never manage the
-same resources. It has `preserveResourcesOnDeletion`, and the Applications have no
-`resources-finalizer`, so this keeps every build and boot source. Then apply the environment and
-sync its Applications; they adopt the existing resources:
-
-```
-oc delete applicationset snok-windows-boot-sources -n openshift-gitops
-oc apply -k environments/default
-```
+or via Argo CD with the ApplicationSet in the config repo (below). Sync is manual. The Job is a
+`PostSync` hook, so it runs after every sync and is a no-op once the boot source exists.
 
 Watch the install with `virtctl vnc windows-11-install -n kubevirt-gitops`.
 
@@ -171,26 +154,51 @@ templates for every version, and runs shellcheck. Run it before pushing. CI
 (`.github/workflows/validate.yaml`) runs it too, plus yamllint, kubeconform and the PowerShell
 checks (`hack/check-powershell.ps1`).
 
-## Environments
+## Deploying from a config repo
 
-Settings are per environment, not per cluster: every cluster in an environment gets the same
-Applications, ISO server and rebuild schedule. There is one environment, `default`:
+This repository is generic: no environment's ISO server, overlays or Argo CD Applications live
+here. Each environment keeps them in its own (usually private) config repository and uses this
+one as a remote base, pinned to a tag:
 
-| Path | What it is |
-|---|---|
-| `environments/base/` | The ApplicationSet, with the environment name as a placeholder |
-| `environments/default/kustomization.yaml` | Names the ApplicationSet and its Applications after the environment |
-| `environments/default/windows/` | Kustomize Component every `winXX/overlays/default` includes: `ISO_BASE_URL`, and the commented patch that turns on monthly rebuilds |
+```
+<config repo>/kubevirt-windows/<environment>/
+  kustomization.yaml          # oc apply -k: the ApplicationSet
+  applicationset.yaml         # one Application per overlays/<version>, at a tag of the config repo
+  settings/                   # Component: ConfigMap windows-environment-settings (ISO_BASE_URL),
+                              # and the patch that turns on monthly rebuilds
+  overlays/<version>/kustomization.yaml
+```
 
-To add an environment (for example one with its own ISO server):
-- copy `environments/default` to `environments/<name>`, and change the name in its
-  `kustomization.yaml` and `ISO_BASE_URL` in `windows/settings.yaml`
-- add `winXX/overlays/<name>` for each Windows version (a copy of `overlays/default` pointing at
-  `environments/<name>/windows`)
+Each overlay:
+
+```
+resources:
+- https://github.com/therevoman/kubevirt-gitops//win11/base?ref=v1.0.0
+components:
+- ../../settings                                   # first: windows/environment reads its ConfigMap
+- https://github.com/therevoman/kubevirt-gitops//windows/environment?ref=v1.0.0
+```
+
+[examples/environment](examples/environment) is a complete example with local paths; CI renders it.
+
+Pin `?ref=` to a tag, never `main`. Argo CD caches manifests by the config repo's revision, so it
+doesn't notice changes in a floating remote base until a hard refresh. To upgrade: tag this
+repository, bump `?ref=` in the config repo, tag the config repo and point its ApplicationSet at
+the new tag.
+
+Moving a cluster from an ApplicationSet of this repository's former `clusters/<cluster>` or
+`environments/<environment>` directories: delete it first, so two sets of Applications never
+manage the same resources. It has `preserveResourcesOnDeletion`, and the Applications have no
+`resources-finalizer`, so this keeps every build and boot source. Then apply the config repo's
+ApplicationSet and sync its Applications; they adopt the existing resources:
+
+```
+oc delete applicationset snok-windows-boot-sources -n openshift-gitops
+oc apply -k <config repo>/kubevirt-windows/default
+```
 
 History: the per-cluster branches (`sno`, `ocs`, `ocs-old`, `bm`, `win2k22`) were merged into
 `main` on 2026-11-07 as per-cluster overlays (`clusters/<cluster>`, `winXX/overlays/<cluster>`).
-Those clusters had come to share every setting, so they were collapsed into the `default`
-environment.
+Those clusters came to share every setting, and their overlays moved to a config repository.
 
 Don't create a branch.

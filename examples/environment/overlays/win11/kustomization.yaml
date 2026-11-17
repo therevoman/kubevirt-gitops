@@ -1,0 +1,11 @@
+# Example environment overlay for win11. A config repository uses remote paths instead, pinned to a tag:
+#   resources:  [https://github.com/therevoman/kubevirt-gitops//win11/base?ref=v1.0.0]
+#   components: [../../settings, https://github.com/therevoman/kubevirt-gitops//windows/environment?ref=v1.0.0]
+# The settings come first: windows/environment reads their ConfigMap.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../../../win11/base
+components:
+- ../../settings                    # this environment's settings (ConfigMap windows-environment-settings)
+- ../../../../windows/environment   # ISO_BASE_URL replacement

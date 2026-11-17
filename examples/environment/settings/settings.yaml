@@ -1,4 +1,4 @@
-# Environment "default" settings for the Windows boot-source builds.
+# Example environment settings for the Windows boot-source builds (see windows/environment).
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,4 +8,4 @@ metadata:
 data:
   # Replaces "http://webserver.example.com" in each winXX/base install ISO URL. The ISOs must be
   # at <ISO_BASE_URL>/windows/<file>, with the file names from winXX/base/install-iso.yaml.
-  ISO_BASE_URL: http://qnas.revoweb.home/isos
+  ISO_BASE_URL: http://isos.example.org/isos
