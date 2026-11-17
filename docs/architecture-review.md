@@ -111,22 +111,23 @@ The plan, in order:
 - [x] **3.1** `win10`: Windows 10 Pro, desktop, no TPM.
 - [x] **3.2** `win2k16`: Windows Server 2016 Standard (Desktop Experience). Windows Update stall
   limit raised, because 2016 cumulative updates are slow.
-- [~] **3.3** `win2k25`: Windows Server 2025 Standard (Desktop Experience). Needs a virtio-win
+- [x] **3.3** `win2k25`: Windows Server 2025 Standard (Desktop Experience). Needs a virtio-win
   release with `2k25` drivers (the build fails fast if `viostor`/`vioscsi` are missing).
-  **Blocked:** no Server 2025 ISO exists yet. Upload it as `isos/windows/server-2025.iso` to
-  `qnas.revoweb.home` and to `192.168.20.14` (ocs).
+  The ISO (`isos/windows/server-2025.iso` on `qnas.revoweb.home` and `192.168.20.14`) was first
+  a copy of the Windows 11 ISO; Setup showed the Windows 11 product-key page. The real Server
+  2025 ISO (volume label `SSS_X64FREE_EN-US_DV9`) was uploaded on 2026-11-17 and builds (3.6).
 - [x] **3.4** Applications for all three in every `clusters/<cluster>`.
 - [x] **3.5 Confirm against a cluster** (snok, 2026-11-16):
   - [x] ISO names. On both `qnas.revoweb.home` and `192.168.20.14`:
-    `Windows10-22H2.iso` and `windows/server-2016.iso` exist; `windows/server-2025.iso` is
-    missing (see 3.3). Expect the 2016 file to be an evaluation ISO (index 2 = Standard Desktop
+    `Windows10-22H2.iso`, `windows/server-2016.iso` and `windows/server-2025.iso` exist
+    (see 3.3). Expect the 2016 file to be an evaluation ISO (index 2 = Standard Desktop
     Experience).
   - [x] Template disk sizes. The templates request 60Gi for windows10 and windows2k16, 64Gi for
     windows11 and windows2k25. `DISK_SIZE` is not larger in any version (win2k25 is 60Gi).
   - [x] The DataSources for all six versions exist in `openshift-virtualization-os-images`.
   - Templates come in two variants: `*-medium` boots from SATA, `*-highperformance-*` from virtio.
     The win10 image boots on both (see 3.6).
-- [~] **3.6 Build each new version once.**
+- [x] **3.6 Build each new version once.**
   - [x] win10, on snok on 2026-11-16, in 41 min. Steps: Setup, post-install, 2 Windows Update
     rounds, sysprep, E1 check (2 min), then `win10-2026-11` was published as `win10`. Clones
     boot and run cloudbase-init from the `windows10-highperformance-medium` template (virtio
@@ -135,7 +136,9 @@ The plan, in order:
   - [x] win2k16, on snok on 2026-11-17, in 100 min (4 Windows Update rounds, image check 1 min).
     It needed the transcript fix (2.4). A `windows2k16-server-medium` clone booted Server 2016,
     build 14393, with the guest agent up in 45 s.
-  - [ ] win2k25: blocked on its ISO (3.3).
+  - [x] win2k25, on snok on 2026-11-17, in 56 min (4 Windows Update rounds, image check 1 min).
+    A `windows2k25-server-medium` clone booted Windows Server 2025 Standard Evaluation, build
+    26100, with the guest agent up in 60 s.
 
 ## Step 4: delivery and quality (open)
 
