@@ -1,0 +1,14 @@
+# Microsoft Windows Server 2025 boot source: the shared build in windows/build with this version's parameters (os.env).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- install-iso.yaml
+configMapGenerator:
+- name: windows-OS-install-params     # renamed to windows-2k25-install-params by windows/build
+  namespace: kubevirt-gitops
+  envs:
+  - os.env
+  options:
+    disableNameSuffixHash: true
+components:
+- ../../windows/build

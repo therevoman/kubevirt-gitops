@@ -1,3 +1,0 @@
-namespace: kubevirt-os-images
-resources:
-- ../../base

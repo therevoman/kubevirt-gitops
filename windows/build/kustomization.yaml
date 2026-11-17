@@ -1,0 +1,65 @@
+# Shared Windows boot-source build. Each winXX/base includes this Component and supplies a
+# ConfigMap windows-OS-install-params (from its os.env). The replacements below put that OS
+# key (data.OS: 11, 2k22, ...) into every name, so each build gets its own resources:
+# windows-OS-install -> windows-11-install, windows-2k22-install, ...
+# install.sh reads the other parameters from the same ConfigMap (envFrom) and fills the
+# @PLACEHOLDERS@ in config/ when it creates the build VM.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+- windows-install-sa.yaml
+- windows-install-rbac.yaml
+- windows-install-job.yaml
+# Mounted into the Job at /scripts. install.sh puts autounattend.xml and post-install.ps1 on the
+# build VM's scripts CD-ROM (a Secret, because the rendered answer file holds the build password).
+configMapGenerator:
+- name: windows-OS-install-scripts
+  namespace: kubevirt-gitops
+  files:
+  - config/install.sh
+  - config/windows-install-vm.yaml
+  - config/clone-boot-source.yaml
+  - config/autounattend.xml
+  - config/post-install.ps1
+  options:
+    disableNameSuffixHash: true
+replacements:
+- source:
+    kind: ConfigMap
+    name: windows-OS-install-params
+    fieldPath: data.OS
+  # Field values are split on "-"; part 1 is the OS key. References come before the names they
+  # point at, because a target is selected by its current name.
+  targets:
+  - select: {kind: Job, name: windows-OS-install}
+    options: {delimiter: "-", index: 1}
+    fieldPaths:
+    - spec.template.spec.serviceAccountName
+    - spec.template.spec.volumes.[name=scripts].configMap.name
+    - spec.template.spec.containers.[name=ose-cli].envFrom.0.configMapRef.name
+    - metadata.name
+  - select: {kind: RoleBinding, name: windows-OS-install-launcher-exec}
+    options: {delimiter: "-", index: 1}
+    fieldPaths:
+    - roleRef.name
+  - select: {kind: RoleBinding}
+    options: {delimiter: "-", index: 1}
+    fieldPaths:
+    - subjects.0.name
+    - metadata.name
+  - select: {kind: Role, name: windows-OS-install-launcher-exec}
+    options: {delimiter: "-", index: 1}
+    fieldPaths:
+    - metadata.name
+  - select: {kind: ServiceAccount, name: windows-OS-install}
+    options: {delimiter: "-", index: 1}
+    fieldPaths:
+    - metadata.name
+  - select: {kind: ConfigMap, name: windows-OS-install-scripts}
+    options: {delimiter: "-", index: 1}
+    fieldPaths:
+    - metadata.name
+  - select: {kind: ConfigMap, name: windows-OS-install-params}
+    options: {delimiter: "-", index: 1}
+    fieldPaths:
+    - metadata.name

@@ -1,0 +1,120 @@
+# Build VM for a Windows boot source. install.sh fills the at-sign placeholders from the build
+# parameters (winXX/base/os.env) and drops the TPM block unless TPM=true.
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  annotations:
+    name.os.template.kubevirt.io/@BOOT_SOURCE@: @OS_NAME@
+    description: @NAME@ (@BOOT_SOURCE@ boot-source build)
+  labels:
+    app: @NAME@
+  name: @NAME@
+spec:
+  runStrategy: Manual
+  dataVolumeTemplates:
+  - metadata:
+      name: @NAME@-rootdisk
+    spec:
+      source:
+        blank: {}
+      storage:                         # StorageProfile picks accessModes/volumeMode
+        resources:
+          requests:
+            storage: @DISK_SIZE@
+  template:
+    metadata:
+      annotations:
+        vm.kubevirt.io/os: @OS_ID@
+        vm.kubevirt.io/workload: @WORKLOAD@
+      labels:
+        kubevirt.io/domain: @NAME@
+        vm.kubevirt.io/name: @NAME@
+    spec:
+      architecture: amd64
+      domain:
+        clock:
+          timer:
+            hpet:
+              present: false
+            hyperv: {}
+            pit:
+              tickPolicy: delay
+            rtc:
+              tickPolicy: catchup
+          utc: {}
+        cpu:
+          sockets: 1
+          cores: 4
+          threads: 1
+        memory:
+          guest: 8Gi
+        devices:
+          disks:
+          - name: rootdisk
+            bootOrder: 2
+            disk:
+              bus: sata                # inbox driver in Windows Setup; clones get virtio drivers from virtio-win
+          - name: install-iso
+            bootOrder: 1
+            cdrom:
+              bus: sata
+          - name: windows-guest-tools
+            cdrom:
+              bus: sata
+          - name: install-scripts
+            cdrom:
+              bus: sata
+          # @IF_TPM@
+          tpm: {}                      # Windows 11 requires TPM 2.0
+          # @END_TPM@
+          inputs:
+          - bus: usb
+            name: tablet
+            type: tablet
+          interfaces:
+          - name: default
+            model: virtio              # NetKVM from virtio-win; post-install installs it before using the network
+            masquerade: {}
+          rng: {}
+        features:
+          acpi: {}
+          apic: {}
+          smm: {}
+          hyperv:
+            frequencies: {}
+            ipi: {}
+            reenlightenment: {}
+            relaxed: {}
+            reset: {}
+            runtime: {}
+            spinlocks:
+              spinlocks: 8191
+            synic: {}
+            synictimer:
+              direct: {}
+            tlbflush: {}
+            vapic: {}
+            vpindex: {}
+        firmware:
+          bootloader:
+            efi:
+              secureBoot: true
+      evictionStrategy: None
+      hostname: @NAME@
+      networks:
+      - name: default
+        pod: {}
+      terminationGracePeriodSeconds: 180
+      volumes:
+      - name: rootdisk
+        dataVolume:
+          name: @NAME@-rootdisk
+      - name: install-iso
+        persistentVolumeClaim:
+          claimName: @ISO_DV@
+      - name: windows-guest-tools
+        containerDisk:
+          image: @VIRTIO_WIN_IMAGE@
+      - name: install-scripts
+        secret:
+          secretName: @CD_SECRET@      # created by install.sh (holds the build password)
