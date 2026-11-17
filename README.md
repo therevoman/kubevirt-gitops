@@ -26,6 +26,8 @@ On an OpenShift cluster with OpenShift Virtualization and OpenShift GitOps:
    The GitOps operator then gives the instance's application controller full rights in those
    namespaces. It needs them for the build's RoleBindings to `admin` and
    `os-images.kubevirt.io:edit` too: Kubernetes only lets it bind roles whose permissions it holds.
+   On a cluster with many CRDs, also raise the controller's memory limit; the default 2Gi gets
+   OOMKilled (see [gitopsservice](gitopsservice/README.md#controller-memory)).
 3. Create the cluster's app-of-apps: `oc apply -k clusters/<cluster>` (see
    [Microsoft Windows boot sources](#microsoft-windows-boot-sources)).
 
@@ -39,7 +41,7 @@ On an OpenShift cluster with OpenShift Virtualization and OpenShift GitOps:
 | [datavolumes](datavolumes) | Fedora and CentOS Stream cloud-image DataVolumes |
 | [vms](vms) | Demo Fedora and CentOS VMs cloned from DataSources |
 | [examples](examples) | VirtualMachinePool demos and a Windows example VM per version (not deployed by `clusters/`) |
-| [gitopsservice](gitopsservice) | OpenShift GitOps settings: Argo CD health checks, infra placement, namespaces |
+| [gitopsservice](gitopsservice) | OpenShift GitOps settings: Argo CD health checks, namespace label, controller memory, infra placement |
 | [docs](docs) | [Architecture review and improvement tracker](docs/architecture-review.md), [fork survey](docs/upstream-fork-survey.md) |
 
 ### DataVolumes
@@ -86,7 +88,6 @@ winXX/
     install-iso.yaml            # DataVolume importing the install ISO over HTTP
     kustomization.yaml          # install-iso + params + components: [../../windows/build]
   overlays/
-    openshift/                  # generic, no cluster specifics
     snok/ sno/ ocs/ bm/         # base + components: [clusters/<cluster>/windows]
 ```
 

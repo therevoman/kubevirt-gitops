@@ -151,6 +151,17 @@ The plan, in order:
   - `preserveResourcesOnDeletion: true` keeps boot sources if the ApplicationSet or a version
     is removed.
   - Migration: delete a cluster's old Applications before applying (README, "Run one directly").
+  - [x] Synced through Argo CD on snok on 2026-11-17: all six Applications Synced and Healthy,
+    and each build Job (PostSync hook) exited because its boot source exists. Two things had to
+    be fixed first, both now in the README and `gitopsservice/README.md`:
+    - The `openshift-gitops` instance can only write to namespaces labelled
+      `argocd.argoproj.io/managed-by=openshift-gitops`. Without the label on `kubevirt-gitops`
+      and `openshift-virtualization-os-images`, syncs stayed `Running` with nothing applied.
+    - The application controller's default 2Gi limit was OOMKilled on snok (about 640 CRDs);
+      it uses about 2.3Gi after the syncs. Raised to 6Gi.
+  - Removed the unused `win*/overlays/openshift` (no cluster's ApplicationSet picks them up) and
+    the orphaned `datavolumes/overlays/openshift/application.yaml` left from the old `apps/`
+    entry point.
   - [ ] Not yet checked on a live Argo CD. It needs goTemplate and matrix-parameter support
     (Argo CD 2.5+).
 - [x] **4.2 ISO host per cluster.** `clusters/<cluster>/windows/` is a Component with one
