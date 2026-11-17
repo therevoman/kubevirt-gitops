@@ -14,7 +14,7 @@ On an OpenShift cluster with OpenShift Virtualization and OpenShift GitOps:
 
 1. Configure the GitOps operator's instance: Argo CD health checks for KubeVirt kinds and a 6Gi
    memory limit for the application controller (the default 2Gi gets OOMKilled on clusters with
-   many CRDs): `oc apply -k gitopsservice/health` (see [gitopsservice](gitopsservice/README.md)).
+   many CRDs): `oc apply -k gitopsservice/argocd` (see [gitopsservice](gitopsservice/README.md)).
 2. Let that instance manage the two namespaces the builds write to. The default `openshift-gitops`
    instance can read the whole cluster but only write where a namespace carries its
    `managed-by` label; without it, syncs hang on the first Job, CronJob or DataVolume:

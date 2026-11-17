@@ -158,7 +158,7 @@ The plan, in order:
       `argocd.argoproj.io/managed-by=openshift-gitops`. Without the label on `kubevirt-gitops`
       and `openshift-virtualization-os-images`, syncs stayed `Running` with nothing applied.
     - The application controller's default 2Gi limit was OOMKilled on snok (about 640 CRDs);
-      it uses about 2.3Gi after the syncs. `gitopsservice/health` now sets a 6Gi limit.
+      it uses about 2.3Gi after the syncs. `gitopsservice/argocd` now sets a 6Gi limit.
   - Removed the unused `win*/overlays/openshift` (no cluster's ApplicationSet picks them up) and
     the orphaned `datavolumes/overlays/openshift/application.yaml` left from the old `apps/`
     entry point.
@@ -230,7 +230,8 @@ The plan, in order:
     `win2k22-2026-11` (new UID, DataSource Ready again). New template clones boot it.
   - [ ] Not yet checked: pruning past `KEEP_BUILDS`. This needs a third month, or extra dated
     PVCs created by hand.
-- [x] **E3 Argo CD health.** `gitopsservice/health` is a kustomization that puts the Lua checks
+- [x] **E3 Argo CD health.** `gitopsservice/health` (renamed `gitopsservice/argocd` once it also
+  set the controller memory) is a kustomization that puts the Lua checks
   into `spec.resourceHealthChecks` of ArgoCD `openshift-gitops` (`oc apply -k
   gitopsservice/health`). The `.lua` files stay separate and are filled in by `replacements`.
   - Checks: HyperConverged (from `setup/`), plus new ones for DataSource and
