@@ -89,10 +89,22 @@ The plan, in order:
     - On Windows 10, removing the per-user Cortana package at first logon fails with
       0x80070002. `post-install.ps1` now logs failed Appx removals as warnings.
   - The virtio NIC works: NetKVM installed, network up, `netkvm.inf` in the driver store.
+  - win2k22 rebuilt on the new build (2026-11-17, Job from `cronjob/windows-2k22-rebuild`) in
+    52 min. It took 3 Windows Update rounds, and the image check passed in 1 min. It replaced the
+    existing `win2k22` boot source (see E2). A `windows2k22-server-medium` clone booted Server 2022
+    Standard Evaluation, build 20348.
+  - win2k16 (3.6) brought a third fix. On Server 2016 (PowerShell 5.1.14393),
+    `Install-Module PSWindowsUpdate` ends the running transcript, so the next `Stop-Transcript`
+    threw and stopped post-install before the first reboot. `post-install.ps1` now tolerates a
+    transcript that has already ended, and restarts it after the module loads.
+  - Every build fired `GuestFilesystemAlmostOutOfSpace` (critical) for the install ISO (`D:\`,
+    100% used). KubeVirt's rule excludes `udf` but Windows reports `UDF`. `install.sh` now ejects
+    the ISO when Setup has finished (`virsh change-media --eject --live`). Checked by hand on the
+    running win2k25 build: the drive is gone from the guest's filesystem metrics.
 
   Not yet checked:
-  - win2k19 and win2k22 haven't been rebuilt on the new build: their boot sources exist on snok,
-    and a rebuild replaces them. Rebuild them once and record the result here.
+  - win2k19 hasn't been rebuilt on the new build. Its boot source exists on snok; a rebuild
+    replaces it the same way as win2k22.
 
 ## Step 3: new Windows versions
 
@@ -120,7 +132,9 @@ The plan, in order:
     boot and run cloudbase-init from the `windows10-highperformance-medium` template (virtio
     disk) and from `examples/windows/win10` (SATA). That template asks for dedicated CPUs, which
     snok doesn't have, so the test removed them.
-  - [ ] win2k16: not built yet.
+  - [x] win2k16, on snok on 2026-11-17, in 100 min (4 Windows Update rounds, image check 1 min).
+    It needed the transcript fix (2.4). A `windows2k16-server-medium` clone booted Server 2016,
+    build 14393, with the guest agent up in 45 s.
   - [ ] win2k25: blocked on its ISO (3.3).
 
 ## Step 4: delivery and quality (open)
@@ -197,8 +211,11 @@ The plan, in order:
       (DataSource Ready). The build VM was deleted.
     - A Job created from the CronJob detected rebuild mode and exited ("this month's build
       exists"). Rerunning the Job exited ("boot source exists").
-  - [ ] Not yet checked: replacing an existing boot source, and pruning past `KEEP_BUILDS`.
-    These need a second month, or deleting a live boot source on snok.
+  - [x] Replacing an existing boot source, checked on snok on 2026-11-17 (win2k22 rebuild Job
+    from the CronJob). The old `win2k22` PVC was deleted in 7 s and recloned from
+    `win2k22-2026-11` (new UID, DataSource Ready again). New template clones boot it.
+  - [ ] Not yet checked: pruning past `KEEP_BUILDS`. This needs a third month, or extra dated
+    PVCs created by hand.
 - [x] **E3 Argo CD health.** `gitopsservice/health` is a kustomization that puts the Lua checks
   into `spec.resourceHealthChecks` of ArgoCD `openshift-gitops` (`oc apply -k
   gitopsservice/health`). The `.lua` files stay separate and are filled in by `replacements`.
