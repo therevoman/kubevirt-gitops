@@ -5,4 +5,4 @@ metadata:
   annotations:
     config.kubernetes.io/local-config: "true"   # build-time only; not applied to the cluster
 data:
-  ISO_HOST: 192.168.20.14
+  ISO_HOST: qnas.revoweb.home

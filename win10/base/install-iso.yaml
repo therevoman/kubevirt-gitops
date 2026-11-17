@@ -9,7 +9,7 @@ metadata:
 spec:
   source:
     http:
-      url: http://qnas.revoweb.home/isos/Windows10-22H2.iso     # per-cluster overlays may patch this
+      url: http://webserver.example.com/windows/Windows10-22H2.iso     # overlays may patch this
   storage:
     resources:
       requests:

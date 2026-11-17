@@ -125,7 +125,7 @@ Cluster differences are kept out of the base:
 - **virtio-win**: `install.sh` reads the image from ConfigMap `openshift-cnv/virtio-win`, so it
   always matches the installed OpenShift Virtualization release. Server 2025 needs a release
   with `2k25` drivers.
-- **ISO host**: each `winXX/base` names its ISO file (`http://qnas.revoweb.home/isos/...`).
+- **ISO host**: each `winXX/base` names its ISO file (`http://webserver.example.com/windows/...`).
   The host comes from `clusters/<cluster>/windows/settings.yaml` (`ISO_HOST`), which every
   `winXX/overlays/<cluster>` includes. Change a cluster's ISO server in that one file.
 
