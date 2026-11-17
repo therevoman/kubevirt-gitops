@@ -1,0 +1,19 @@
+# App-of-apps for environment "default": oc apply -k environments/default
+# Creates ApplicationSet default-windows-boot-sources, which generates default-<version>-boot-source
+# for every win*/overlays/default directory. Sync is manual: a build takes hours.
+# Every cluster in this environment gets the same Applications and settings; a cluster that needs
+# different settings belongs in its own environment (see README, "Environments").
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../base
+patches:
+- target:
+    kind: ApplicationSet
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: default-windows-boot-sources
+    - op: replace
+      path: /spec/generators/0/matrix/generators/0/list/elements/0/environment
+      value: default

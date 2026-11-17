@@ -169,6 +169,19 @@ The plan, in order:
   `winXX/base`. The settings ConfigMap is `local-config`, so it isn't applied. All per-cluster
   overlays are now the same 6 lines (base + that Component), and the ocs URL patches are gone.
   Output is byte-identical to `refactor` for all 30 overlays.
+- [x] **4.4 Environments instead of clusters** (2026-11-17). The four clusters had come to share
+  every setting (ocs now uses the same ISO host), and settings are needed per environment, not
+  per cluster:
+  - `clusters/{base,bm,ocs,sno,snok}` became `environments/base` and one environment,
+    `environments/default`. Each version's `overlays/{bm,ocs,sno,snok}` became
+    `overlays/default`. The ApplicationSet is `default-windows-boot-sources`, and its
+    Applications are `default-<version>-boot-source`, labelled `kubevirt-gitops/environment`.
+  - The install ISO URLs in `winXX/base` use the placeholder `http://webserver.example.com/windows/<file>`.
+    The environment's `ISO_BASE_URL` (replacing `ISO_HOST`) replaces everything before
+    `/windows/`, so an environment sets the server and a path prefix
+    (`http://qnas.revoweb.home/isos` for `default`).
+  - Migration on a cluster: delete `<cluster>-windows-boot-sources`, apply
+    `environments/default`, sync (README).
 - [x] **4.3 CI** (`.github/workflows/validate.yaml`, on every push and pull request):
   - `hack/validate.sh` (also runs locally):
     - builds every kustomization except Components

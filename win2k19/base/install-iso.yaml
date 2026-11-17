@@ -9,7 +9,7 @@ metadata:
 spec:
   source:
     http:
-      url: http://webserver.example.com/windows/server-2019.iso     # overlays may patch this
+      url: http://webserver.example.com/windows/server-2019.iso     # environments/<env>/windows replaces http://webserver.example.com
   storage:
     resources:
       requests:

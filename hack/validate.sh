@@ -53,8 +53,8 @@ for f in files:
         if d.get('kind') == 'Application' and 'path' in d.get('spec', {}).get('source', {}):
             apps += 1; p = d['spec']['source']['path']
             if not os.path.isdir(p): print(f'FAIL: {f}: Application path {p} does not exist'); bad = 1
-# ApplicationSets: check the rendered cluster app-of-apps (the cluster name is patched in there)
-for c in sorted(glob.glob('clusters/*/kustomization.yaml')):
+# ApplicationSets: check the rendered environment app-of-apps (the environment name is patched in there)
+for c in sorted(glob.glob('environments/*/kustomization.yaml')):
     c = os.path.dirname(c)
     if c.endswith('/base'): continue
     out = subprocess.run(os.environ['KUSTOMIZE'].split() + [c], capture_output=True, text=True)

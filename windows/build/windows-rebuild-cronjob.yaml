@@ -1,6 +1,6 @@
 # Monthly rebuild (E2): a fresh build with the latest updates into <BOOT_SOURCE>-<YYYY-MM>, checked
-# (E1) and then published as the boot source. Suspended by default; a cluster turns it on in
-# clusters/<cluster>/windows/kustomization.yaml. The pod template is copied from the Job
+# (E1) and then published as the boot source. Suspended by default; an environment turns it on in
+# environments/<environment>/windows/kustomization.yaml. The pod template is copied from the Job
 # windows-OS-install by this Component's replacements, so both always run the same thing; install.sh
 # sees from the Job name (windows-<OS>-rebuild-...) that it is a rebuild.
 apiVersion: batch/v1

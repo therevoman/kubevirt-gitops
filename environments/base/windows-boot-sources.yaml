@@ -1,0 +1,46 @@
+# One Application per Windows version for one environment: <environment>-<version>-boot-source,
+# syncing <version>/overlays/<environment> from main. The git generator finds the versions (every
+# win*/overlays/<environment> directory), so a new version needs no change here.
+# environments/<environment>/kustomization.yaml sets the environment name. Sync stays manual: a
+# build takes hours.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: ENVIRONMENT-windows-boot-sources
+  namespace: openshift-gitops
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - matrix:
+      generators:
+      - list:
+          elements:
+          - environment: ENVIRONMENT   # set per environment
+      - git:
+          repoURL: https://github.com/therevoman/kubevirt-gitops.git
+          revision: main
+          directories:
+          - path: 'win*/overlays/{{ .environment }}'
+  # Deleting the ApplicationSet (or a version directory) must not delete boot sources or builds
+  syncPolicy:
+    preserveResourcesOnDeletion: true
+  template:
+    metadata:
+      name: '{{ .environment }}-{{ index .path.segments 0 }}-boot-source'
+      namespace: openshift-gitops
+      labels:
+        kubevirt-gitops/environment: '{{ .environment }}'
+        kubevirt-gitops/windows-version: '{{ index .path.segments 0 }}'
+    spec:
+      project: default
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: kubevirt-gitops
+      source:
+        repoURL: https://github.com/therevoman/kubevirt-gitops.git
+        targetRevision: main
+        path: '{{ .path.path }}'
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true

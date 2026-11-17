@@ -1,0 +1,30 @@
+# Environment "default" settings for every Windows boot-source build (winXX/overlays/default
+# includes this).
+# ISO_BASE_URL replaces everything before "/windows/" in each install ISO URL; the rest
+# (windows/<file>) comes from winXX/base.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+- settings.yaml
+replacements:
+- source:
+    kind: ConfigMap
+    name: windows-environment-settings
+    fieldPath: data.ISO_BASE_URL
+  targets:
+  - select:
+      kind: DataVolume
+    options:
+      delimiter: /windows/
+      index: 0                      # <ISO_BASE_URL> /windows/ <file>
+    fieldPaths:
+    - spec.source.http.url
+# Monthly rebuilds (CronJob windows-<OS>-rebuild, see windows/build/README.md) are suspended by
+# default. To turn them on for every Windows version in this environment, uncomment:
+# patches:
+# - target:
+#     kind: CronJob
+#   patch: |-
+#     - op: replace
+#       path: /spec/suspend
+#       value: false

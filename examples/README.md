@@ -1,6 +1,6 @@
 # Examples
 
-Demos of `VirtualMachinePool`, and one example VM per Windows boot source. Nothing here is deployed by `clusters/`; apply one by hand with
+Demos of `VirtualMachinePool`, and one example VM per Windows boot source. Nothing here is deployed by `environments/`; apply one by hand with
 `oc apply -k examples/<name>`. `vmpools` has no kustomization, so use `oc apply -f examples/vmpools`.
 
 | Directory | What it shows |

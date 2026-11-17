@@ -1,0 +1,11 @@
+# Environment "default" settings for the Windows boot-source builds.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: windows-environment-settings
+  annotations:
+    config.kubernetes.io/local-config: "true"   # build-time only; not applied to the cluster
+data:
+  # Replaces "http://webserver.example.com" in each winXX/base install ISO URL. The ISOs must be
+  # at <ISO_BASE_URL>/windows/<file>, with the file names from winXX/base/install-iso.yaml.
+  ISO_BASE_URL: http://qnas.revoweb.home/isos
