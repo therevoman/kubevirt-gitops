@@ -1,11 +1,11 @@
 # Settings of the OpenShift GitOps operator's instance (ArgoCD openshift-gitops): Argo CD health
 # checks for KubeVirt kinds (spec.resourceHealthChecks) and the application controller's memory
-# (spec.controller.resources). Apply with: oc apply -k gitopsservice/health
+# (spec.controller.resources). Apply with: oc apply -k gitopsservice/argocd
 # This sets the whole resourceHealthChecks list of that ArgoCD instance.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-- argocd-health-checks.yaml
+- argocd.yaml
 # The Lua sources, only to fill the checks in (local-config: not applied)
 configMapGenerator:
 - name: argocd-health-lua

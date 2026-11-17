@@ -2,7 +2,7 @@
 
 | Path | What it is | Apply |
 |---|---|---|
-| [health](health) | Argo CD health checks for KubeVirt kinds, and the application controller's memory limit, in the `openshift-gitops` ArgoCD instance | `oc apply -k gitopsservice/health` |
+| [argocd](argocd) | Settings of the `openshift-gitops` ArgoCD instance: health checks for KubeVirt kinds and the application controller's memory limit | `oc apply -k gitopsservice/argocd` |
 | `gitopsservice-infra.yaml` | Runs the GitOps operator's instance on infra nodes (optional; only for clusters with infra nodes) | `oc apply -f gitopsservice/gitopsservice-infra.yaml` |
 
 ## Namespace label (required)
@@ -37,9 +37,9 @@ can never delete `openshift-virtualization-os-images`, which the SSP operator ow
 The operator's default limit for the application controller is 2Gi. The controller caches every
 resource type in the cluster, so on a cluster with many CRDs (snok has about 640) it is
 OOMKilled once syncs start, and every sync stays `Running`. On snok it uses about 2.3Gi after
-syncing the six boot-source Applications. `health/argocd-health-checks.yaml` sets
+syncing the six boot-source Applications. `argocd/argocd.yaml` sets
 `spec.controller.resources` on the instance (request 2Gi, limit 6Gi), so
-`oc apply -k gitopsservice/health` applies it on every cluster together with the health checks.
+`oc apply -k gitopsservice/argocd` applies it on every cluster together with the health checks.
 Change it there if a cluster needs more.
 
 Check with `oc get pod openshift-gitops-application-controller-0 -n openshift-gitops`: a
