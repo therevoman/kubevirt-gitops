@@ -61,7 +61,7 @@ function Remove-UserOnlyAppx {
 }
 '@
 . $Lib
-trap { Set-BuildFailed 'post-install' $_; Stop-Transcript; exit 1 }
+trap { Set-BuildFailed 'post-install' $_; try { Stop-Transcript | Out-Null } catch { }; exit 1 }
 
 $Params = Join-Path $PSScriptRoot 'build-params.ps1'
 if (-not (Test-Path $Params)) { throw "build parameters $Params not found" }
@@ -263,7 +263,7 @@ $size = (Get-Partition -DriveLetter C).Size
 if ($max -gt $size + 100MB) { Resize-Partition -DriveLetter C -Size $max; "C: grown from $size to $max bytes" }
 # Build leftovers
 Remove-Item C:\Windows\Temp\build-*, C:\Windows\Temp\sysprep-stage2.ps1 -Force -ErrorAction SilentlyContinue
-Stop-Transcript
+try { Stop-Transcript | Out-Null } catch { }
 '@
 Add-Content -Path "$Scripts\SetupComplete.cmd" -Encoding ASCII -Value "powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Scripts\setup-complete.ps1"
 
@@ -292,7 +292,7 @@ Start-Transcript -Path C:\Windows\Temp\post-install.log -Append
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 . C:\Windows\Temp\build-lib.ps1
-trap { Set-BuildFailed 'stage2' $_; Stop-Transcript; exit 1 }
+trap { Set-BuildFailed 'stage2' $_; try { Stop-Transcript | Out-Null } catch { }; exit 1 }
 . C:\Windows\Temp\build-params.ps1
 Start-Sleep -Seconds 60                       # let services settle after boot
 
@@ -322,6 +322,10 @@ for ($i = 1; -not (Get-Module -ListAvailable PSWindowsUpdate); $i++) {
     }
 }
 Import-Module PSWindowsUpdate
+# Server 2016's first PowerShell 5.1 (14393.693) ends the transcript while PowerShellGet installs the
+# module (build log ended mid-round, then Stop-Transcript failed the build): start it again.
+try { Stop-Transcript | Out-Null } catch { }
+Start-Transcript -Path C:\Windows\Temp\post-install.log -Append | Out-Null
 # The same error in two rounds in a row is not transient: fail instead of rebooting again.
 $ErrFile = 'C:\Windows\Temp\build-wu-lasterror.txt'
 $OfferFile = 'C:\Windows\Temp\build-wu-lastoffer.txt'
@@ -354,7 +358,7 @@ catch {
     $retry = $true
 }
 if ($stuck) { throw $stuck }
-if ($retry) { Stop-Transcript; Restart-Computer -Force; exit 0 }
+if ($retry) { try { Stop-Transcript | Out-Null } catch { }; Restart-Computer -Force; exit 0 }
 
 Set-BuildStatus 'preparing sysprep'
 Unregister-ScheduledTask -TaskName BootSourceSysprep -Confirm:$false
@@ -382,7 +386,7 @@ if (Test-Path $RM) {
 Remove-UserOnlyAppx
 
 Set-BuildStatus 'sysprep running'
-Stop-Transcript
+try { Stop-Transcript | Out-Null } catch { }
 $Conf = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf'
 Set-Location $Conf
 # Quote the whole argument: the path has spaces. /quiet: a failure must not wait on a dialog.
@@ -397,5 +401,5 @@ Register-ScheduledTask -TaskName BootSourceSysprep -Force -User 'NT AUTHORITY\SY
     -Trigger (New-ScheduledTaskTrigger -AtStartup) `
     -Action (New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -ExecutionPolicy Bypass -File $Stage2") | Out-Null
 Set-BuildStatus 'post-install done; rebooting into Windows Update'
-Stop-Transcript
+try { Stop-Transcript | Out-Null } catch { }
 Restart-Computer -Force
