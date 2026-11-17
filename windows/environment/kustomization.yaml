@@ -1,0 +1,31 @@
+# Environment settings for the Windows boot-source builds, as a reusable Component. An environment
+# (normally in a separate config repository, see README "Deploying from a config repo") includes
+# this next to winXX/base, after a Component that supplies ConfigMap windows-environment-settings:
+#
+#   apiVersion: v1
+#   kind: ConfigMap
+#   metadata:
+#     name: windows-environment-settings
+#     annotations:
+#       config.kubernetes.io/local-config: "true"   # build-time only; not applied
+#   data:
+#     ISO_BASE_URL: http://isos.example.org/path    # the ISOs are at <ISO_BASE_URL>/windows/<file>
+#
+# ISO_BASE_URL replaces everything before "/windows/" in each install ISO URL; the rest
+# (windows/<file>) comes from winXX/base (placeholder http://webserver.example.com/windows/<file>).
+# examples/environment is a complete example.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+replacements:
+- source:
+    kind: ConfigMap
+    name: windows-environment-settings
+    fieldPath: data.ISO_BASE_URL
+  targets:
+  - select:
+      kind: DataVolume
+    options:
+      delimiter: /windows/
+      index: 0                      # <ISO_BASE_URL> /windows/ <file>
+    fieldPaths:
+    - spec.source.http.url

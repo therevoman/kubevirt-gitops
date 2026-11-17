@@ -9,7 +9,7 @@ metadata:
 spec:
   source:
     http:
-      url: http://qnas.revoweb.home/isos/windows/server-2019.iso     # per-cluster overlays may patch this
+      url: http://webserver.example.com/windows/server-2019.iso     # the environment's ISO_BASE_URL replaces http://webserver.example.com (windows/environment)
   storage:
     resources:
       requests:

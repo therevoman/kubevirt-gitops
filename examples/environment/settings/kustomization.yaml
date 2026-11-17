@@ -1,0 +1,15 @@
+# Example environment: its settings, as a Component every overlay includes before
+# windows/environment (which reads the ConfigMap). A config repository keeps its own copy.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+- settings.yaml
+# Monthly rebuilds (CronJob windows-<OS>-rebuild, see windows/build/README.md) are suspended by
+# default. To turn them on for every Windows version in this environment, uncomment:
+# patches:
+# - target:
+#     kind: CronJob
+#   patch: |-
+#     - op: replace
+#       path: /spec/suspend
+#       value: false

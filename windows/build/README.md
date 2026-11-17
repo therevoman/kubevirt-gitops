@@ -91,7 +91,8 @@ Two things start a build:
 - **CronJob `windows-<OS>-rebuild`**: a fresh build with that month's updates, on
   `REBUILD_SCHEDULE`. It runs the Job's pod template (copied by the Component's replacements)
   and exits at once if this month's build exists. It is **suspended by default**. Turn it on
-  for a cluster with the commented patch in `clusters/<cluster>/windows/kustomization.yaml`.
+  for an environment with the commented patch in its settings Component (see
+  `examples/environment/settings/kustomization.yaml`).
   To run one now:
   `oc create job --from=cronjob/windows-11-rebuild windows-11-rebuild-now -n kubevirt-gitops`
   (the Job name must contain `-rebuild-`).

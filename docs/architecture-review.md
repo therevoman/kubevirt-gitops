@@ -169,6 +169,22 @@ The plan, in order:
   `winXX/base`. The settings ConfigMap is `local-config`, so it isn't applied. All per-cluster
   overlays are now the same 6 lines (base + that Component), and the ocs URL patches are gone.
   Output is byte-identical to `refactor` for all 30 overlays.
+- [x] **4.4 Environments in a config repository** (2026-11-17). The four clusters had come to
+  share every setting (ocs now uses the same ISO host). Settings are needed per environment, not
+  per cluster, and they don't belong in this public, generic repository:
+  - `clusters/` and every `winXX/overlays/` are gone. Environments keep their overlays, settings
+    and ApplicationSet in a config repository (for snok: `openshift-works-gitops`, branch
+    `new-customizations`, `kubevirt-windows/default/`). They use `winXX/base` and
+    `windows/environment` as remote bases pinned to a tag of this repository.
+  - The install ISO URLs in `winXX/base` use the placeholder
+    `http://webserver.example.com/windows/<file>`. The environment's `ISO_BASE_URL` (replacing
+    `ISO_HOST`) replaces everything before `/windows/` (Component `windows/environment`), so an
+    environment sets the server and a path prefix.
+  - All ISOs live under `/isos/windows/`. win10 and win11 now use `win-10-22h2.iso` and
+    `win-11-25h2.iso` there, instead of `Windows10-22H2.iso` and `Win11_25H2_English_x64.iso` at
+    the top of `/isos/`.
+  - `examples/environment` is a complete environment with local paths. `hack/validate.sh` checks
+    that it has an overlay for every version and that every ISO URL uses its `ISO_BASE_URL`.
 - [x] **4.3 CI** (`.github/workflows/validate.yaml`, on every push and pull request):
   - `hack/validate.sh` (also runs locally):
     - builds every kustomization except Components

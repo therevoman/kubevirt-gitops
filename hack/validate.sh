@@ -38,7 +38,7 @@ if command -v luac >/dev/null; then
   for l in gitopsservice/argocd/*.lua; do luac -p "$l" || err "$l: Lua syntax"; done
 else echo "luac not installed; Lua syntax not checked"; fi
 
-echo "== Argo CD paths"
+echo "== Argo CD paths and example environment"
 python3 - <<'PY' || fail=1
 import glob, subprocess, sys, yaml, os
 
@@ -53,27 +53,20 @@ for f in files:
         if d.get('kind') == 'Application' and 'path' in d.get('spec', {}).get('source', {}):
             apps += 1; p = d['spec']['source']['path']
             if not os.path.isdir(p): print(f'FAIL: {f}: Application path {p} does not exist'); bad = 1
-# ApplicationSets: check the rendered cluster app-of-apps (the cluster name is patched in there)
-for c in sorted(glob.glob('clusters/*/kustomization.yaml')):
-    c = os.path.dirname(c)
-    if c.endswith('/base'): continue
-    out = subprocess.run(os.environ['KUSTOMIZE'].split() + [c], capture_output=True, text=True)
-    for d in yaml.safe_load_all(out.stdout):
-        if not d or d.get('kind') != 'ApplicationSet': continue
-        sets += 1
-        for g in d['spec']['generators']:
-            gens = g.get('matrix', {}).get('generators', [g])
-            params = {}
-            for sub in gens:
-                for e in sub.get('list', {}).get('elements', []): params.update(e)
-            for sub in gens:
-                for dirs in sub.get('git', {}).get('directories', []):
-                    pat = dirs['path']
-                    for k, v in params.items(): pat = pat.replace('{{ .%s }}' % k, v).replace('{{.%s}}' % k, v)
-                    hits = [h for h in glob.glob(pat) if os.path.isdir(h)]
-                    if not hits: print(f'FAIL: {c}: ApplicationSet {d["metadata"]["name"]} pattern {pat} matches nothing'); bad = 1
-                    else: print(f'{d["metadata"]["name"]}: {pat} -> {len(hits)} Applications')
-print(f'{apps} Applications, {sets} ApplicationSets checked')
+# Example environment: one overlay per Windows version, and the environment's ISO_BASE_URL must
+# replace the placeholder in every install ISO URL (examples/environment, windows/environment)
+base = yaml.safe_load(open('examples/environment/settings/settings.yaml'))['data']['ISO_BASE_URL']
+for env in sorted(glob.glob('win*/base/os.env')):
+    v = env.split('/')[0]; o = f'examples/environment/overlays/{v}'
+    if not os.path.isdir(o): print(f'FAIL: {o} missing (every version needs an example overlay)'); bad = 1; continue
+    out = subprocess.run(os.environ['KUSTOMIZE'].split() + [o], capture_output=True, text=True)
+    urls = [d['spec']['source']['http']['url'] for d in yaml.safe_load_all(out.stdout)
+            if d and d.get('kind') == 'DataVolume' and 'http' in d.get('spec', {}).get('source', {})]
+    if not urls: print(f'FAIL: {o}: no install ISO DataVolume'); bad = 1
+    for u in urls:
+        if not u.startswith(base + '/windows/'): print(f'FAIL: {o}: ISO URL {u} does not start with {base}/windows/'); bad = 1
+        else: sets += 1
+print(f'{apps} Applications checked; {sets} example environment ISO URLs use ISO_BASE_URL')
 sys.exit(bad)
 PY
 
