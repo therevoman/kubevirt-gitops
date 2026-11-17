@@ -9,6 +9,17 @@ metadata:
   name: openshift-gitops
   namespace: openshift-gitops
 spec:
+  # The application controller caches every resource type in the cluster. At the operator's default
+  # 2Gi limit it was OOMKilled on a cluster with ~640 CRDs (snok) as soon as syncs started; it uses
+  # ~2.3Gi there after syncing the boot-source Applications.
+  controller:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 2Gi
+      limits:
+        cpu: "2"
+        memory: 6Gi
   resourceHealthChecks:
   - group: hco.kubevirt.io
     kind: HyperConverged

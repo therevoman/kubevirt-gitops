@@ -12,9 +12,22 @@ the default leans to OpenShift products and namespaces.
 
 On an OpenShift cluster with OpenShift Virtualization and OpenShift GitOps:
 
-1. Add the Argo CD health checks for KubeVirt kinds to the GitOps operator's instance:
-   `oc apply -k gitopsservice/health` (see [gitopsservice](gitopsservice/README.md)).
-2. Create the cluster's app-of-apps: `oc apply -k clusters/<cluster>` (see
+1. Configure the GitOps operator's instance: Argo CD health checks for KubeVirt kinds and a 6Gi
+   memory limit for the application controller (the default 2Gi gets OOMKilled on clusters with
+   many CRDs): `oc apply -k gitopsservice/health` (see [gitopsservice](gitopsservice/README.md)).
+2. Let that instance manage the two namespaces the builds write to. The default `openshift-gitops`
+   instance can read the whole cluster but only write where a namespace carries its
+   `managed-by` label; without it, syncs hang on the first Job, CronJob or DataVolume:
+
+   ```
+   oc create namespace kubevirt-gitops
+   oc label namespace kubevirt-gitops openshift-virtualization-os-images argocd.argoproj.io/managed-by=openshift-gitops
+   ```
+
+   The GitOps operator then gives the instance's application controller full rights in those
+   namespaces. It needs them for the build's RoleBindings to `admin` and
+   `os-images.kubevirt.io:edit` too: Kubernetes only lets it bind roles whose permissions it holds.
+3. Create the cluster's app-of-apps: `oc apply -k clusters/<cluster>` (see
    [Microsoft Windows boot sources](#microsoft-windows-boot-sources)).
 
 ## Repository layout
@@ -27,7 +40,7 @@ On an OpenShift cluster with OpenShift Virtualization and OpenShift GitOps:
 | [datavolumes](datavolumes) | Fedora and CentOS Stream cloud-image DataVolumes |
 | [vms](vms) | Demo Fedora and CentOS VMs cloned from DataSources |
 | [examples](examples) | VirtualMachinePool demos and a Windows example VM per version (not deployed by `clusters/`) |
-| [gitopsservice](gitopsservice) | OpenShift GitOps settings: Argo CD health checks, infra placement, namespaces |
+| [gitopsservice](gitopsservice) | OpenShift GitOps settings: Argo CD health checks, namespace label, controller memory, infra placement |
 | [docs](docs) | [Architecture review and improvement tracker](docs/architecture-review.md), [fork survey](docs/upstream-fork-survey.md) |
 
 ### DataVolumes
@@ -74,7 +87,6 @@ winXX/
     install-iso.yaml            # DataVolume importing the install ISO over HTTP
     kustomization.yaml          # install-iso + params + components: [../../windows/build]
   overlays/
-    openshift/                  # generic, no cluster specifics
     snok/ sno/ ocs/ bm/         # base + components: [clusters/<cluster>/windows]
 ```
 
