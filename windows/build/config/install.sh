@@ -196,6 +196,17 @@ while :; do
   now=$(date +%s)
   st=$(guest_read C:/Windows/Temp/build-status.txt | head -1)
   if [ -n "$st" ] && [ "$st" != "$last" ]; then
+    # The first status comes from post-install, so Setup has finished and nothing reads the install
+    # ISO any more. Eject it (the VM keeps an empty CD drive): a mounted DVD reports a 100% full
+    # filesystem, and its file system type "UDF" slips past the lower-case exclusion in KubeVirt's
+    # GuestFilesystemAlmostOutOfSpace alert, which then fires (critical) for the rest of the build.
+    if [ -z "$last" ] && [ -n "$ISO_DEV" ]; then
+      if vexec virsh change-media $DOM $ISO_DEV --eject --live >/dev/null 2>&1; then
+        log "Setup finished; ejected the install ISO ($ISO_DEV)"
+      else
+        log "WARNING: could not eject the install ISO ($ISO_DEV); expect a GuestFilesystemAlmostOutOfSpace alert for it"
+      fi
+    fi
     log "guest: $st"; last=$st; last_change=$now
     if [[ "$st" == *" FAILED "* ]]; then
       log "Build failed in the guest. Last lines of C:\\Windows\\Temp\\post-install.log:"
