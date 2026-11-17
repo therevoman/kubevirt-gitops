@@ -3,7 +3,13 @@
 | Path | What it is | Apply |
 |---|---|---|
 | [health](health) | Argo CD health checks for KubeVirt kinds, in the `openshift-gitops` ArgoCD instance | `oc apply -k gitopsservice/health` |
-| `gitopsservice-infra.yaml` | Runs the GitOps operator's instance on infra nodes, and creates the namespaces with the `argocd.argoproj.io/managed-by` label | `oc apply -f gitopsservice/gitopsservice-infra.yaml` |
+| `gitopsservice-infra.yaml` | Runs the GitOps operator's instance on infra nodes (optional; only for clusters with infra nodes) | `oc apply -f gitopsservice/gitopsservice-infra.yaml` |
+
+The instance can only write to namespaces labelled `argocd.argoproj.io/managed-by=openshift-gitops`.
+Label `kubevirt-gitops` and `openshift-virtualization-os-images` before syncing (step 2 of Get
+Started in the top-level README). The label is set with `oc label` rather than kept as a Namespace
+manifest here, so `oc delete -k` can never delete `openshift-virtualization-os-images`, which the
+SSP operator owns.
 
 ## Health checks
 
