@@ -54,3 +54,35 @@ subjects:
 - kind: ServiceAccount
   name: windows-OS-install
   namespace: kubevirt-gitops
+---
+# Publishing and pruning builds in the os-images namespace (E2): replace the boot-source PVC with a
+# clone of the new <BOOT_SOURCE>-<YYYY-MM> build, label builds, and delete builds past KEEP_BUILDS.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: windows-OS-install-image-publish
+  namespace: openshift-virtualization-os-images
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list", "patch", "delete"]
+- apiGroups: ["cdi.kubevirt.io"]
+  resources: ["datavolumes"]
+  verbs: ["get", "list", "create", "delete"]
+- apiGroups: ["cdi.kubevirt.io"]
+  resources: ["datavolumes/source"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: windows-OS-install-image-publish
+  namespace: openshift-virtualization-os-images
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: windows-OS-install-image-publish
+subjects:
+- kind: ServiceAccount
+  name: windows-OS-install
+  namespace: kubevirt-gitops

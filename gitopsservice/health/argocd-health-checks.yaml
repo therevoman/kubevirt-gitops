@@ -1,0 +1,21 @@
+# Health checks for kinds Argo CD has no built-in check for. Argo CD already ships checks for
+# kubevirt.io VirtualMachine/VirtualMachineInstance and cdi.kubevirt.io DataVolume (they came from
+# this repository's original scripts), so those are not overridden here.
+# Applied to the OpenShift GitOps operator's default instance. The "check" values are filled from the
+# .lua files next to this by kustomization.yaml.
+apiVersion: argoproj.io/v1beta1
+kind: ArgoCD
+metadata:
+  name: openshift-gitops
+  namespace: openshift-gitops
+spec:
+  resourceHealthChecks:
+  - group: hco.kubevirt.io
+    kind: HyperConverged
+    check: FROM-LUA-FILE
+  - group: cdi.kubevirt.io
+    kind: DataSource
+    check: FROM-LUA-FILE
+  - group: pool.kubevirt.io
+    kind: VirtualMachinePool
+    check: FROM-LUA-FILE

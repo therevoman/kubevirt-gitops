@@ -1,0 +1,101 @@
+# Example VM cloned from a Windows boot source. The kustomization in each examples/windows/<version>
+# names it <boot source>-example and points it at DataSource <boot source>.
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: BOOTSOURCE-example
+  labels:
+    app: windows-example
+spec:
+  runStrategy: Always
+  dataVolumeTemplates:
+  - metadata:
+      name: BOOTSOURCE-example-rootdisk
+    spec:
+      sourceRef:
+        kind: DataSource
+        name: BOOTSOURCE
+        namespace: openshift-virtualization-os-images
+      storage:                         # StorageProfile picks accessModes/volumeMode
+        resources:
+          requests:
+            storage: 60Gi              # at least the boot-source size (DISK_SIZE)
+  template:
+    metadata:
+      annotations:
+        vm.kubevirt.io/os: OSID
+      labels:
+        app: windows-example
+    spec:
+      architecture: amd64
+      domain:
+        clock:
+          timer:
+            hpet:
+              present: false
+            hyperv: {}
+            pit:
+              tickPolicy: delay
+            rtc:
+              tickPolicy: catchup
+          utc: {}
+        cpu:
+          sockets: 1
+          cores: 2
+          threads: 1
+        memory:
+          guest: 4Gi
+        devices:
+          disks:
+          - name: rootdisk
+            bootOrder: 1
+            disk:
+              bus: sata                # the bus the image was built and sysprepped on
+          - name: cloudinitdisk
+            cdrom:
+              bus: sata                # Windows reads the NoCloud ISO only from a CD-ROM
+          inputs:
+          - bus: usb
+            name: tablet
+            type: tablet
+          interfaces:
+          - name: default
+            model: virtio
+            masquerade: {}
+          rng: {}
+        features:
+          acpi: {}
+          apic: {}
+          smm: {}
+          hyperv:
+            frequencies: {}
+            ipi: {}
+            reenlightenment: {}
+            relaxed: {}
+            reset: {}
+            runtime: {}
+            spinlocks:
+              spinlocks: 8191
+            synic: {}
+            synictimer:
+              direct: {}
+            tlbflush: {}
+            vapic: {}
+            vpindex: {}
+        firmware:
+          bootloader:
+            efi:
+              secureBoot: true
+      evictionStrategy: LiveMigrateIfPossible
+      networks:
+      - name: default
+        pod: {}
+      terminationGracePeriodSeconds: 180
+      volumes:
+      - name: rootdisk
+        dataVolume:
+          name: BOOTSOURCE-example-rootdisk
+      - name: cloudinitdisk
+        cloudInitNoCloud:
+          secretRef:
+            name: windows-example-userdata   # you create it: see examples/windows/README.md

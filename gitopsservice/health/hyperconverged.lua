@@ -1,3 +1,4 @@
+-- hco.kubevirt.io/HyperConverged: Healthy when Available, Degraded when the operator reports Degraded.
 hs = { status="Progressing", message="No status available"}
 if obj.status ~= nil then
   if obj.status.conditions ~= nil then

@@ -10,6 +10,7 @@ resources:
 - windows-install-sa.yaml
 - windows-install-rbac.yaml
 - windows-install-job.yaml
+- windows-rebuild-cronjob.yaml
 # Mounted into the Job at /scripts. install.sh puts autounattend.xml and post-install.ps1 on the
 # build VM's scripts CD-ROM (a Secret, because the rendered answer file holds the build password).
 configMapGenerator:
@@ -18,12 +19,22 @@ configMapGenerator:
   files:
   - config/install.sh
   - config/windows-install-vm.yaml
+  - config/windows-verify-vm.yaml
   - config/clone-boot-source.yaml
   - config/autounattend.xml
   - config/post-install.ps1
   options:
     disableNameSuffixHash: true
 replacements:
+# Before the renames below, while the params ConfigMap still has its generic name
+- source:
+    kind: ConfigMap
+    name: windows-OS-install-params
+    fieldPath: data.REBUILD_SCHEDULE
+  targets:
+  - select: {kind: CronJob}
+    fieldPaths:
+    - spec.schedule
 - source:
     kind: ConfigMap
     name: windows-OS-install-params
@@ -38,7 +49,15 @@ replacements:
     - spec.template.spec.volumes.[name=scripts].configMap.name
     - spec.template.spec.containers.[name=ose-cli].envFrom.0.configMapRef.name
     - metadata.name
+  - select: {kind: CronJob, name: windows-OS-rebuild}
+    options: {delimiter: "-", index: 1}
+    fieldPaths:
+    - metadata.name
   - select: {kind: RoleBinding, name: windows-OS-install-launcher-exec}
+    options: {delimiter: "-", index: 1}
+    fieldPaths:
+    - roleRef.name
+  - select: {kind: RoleBinding, name: windows-OS-install-image-publish}
     options: {delimiter: "-", index: 1}
     fieldPaths:
     - roleRef.name
@@ -47,7 +66,7 @@ replacements:
     fieldPaths:
     - subjects.0.name
     - metadata.name
-  - select: {kind: Role, name: windows-OS-install-launcher-exec}
+  - select: {kind: Role}
     options: {delimiter: "-", index: 1}
     fieldPaths:
     - metadata.name
@@ -63,3 +82,12 @@ replacements:
     options: {delimiter: "-", index: 1}
     fieldPaths:
     - metadata.name
+# The monthly CronJob runs the Job's pod template (already renamed above). The including
+# kustomization's patches run after this, so a deadline patch must cover both (see win2k16).
+- source:
+    kind: Job
+    fieldPath: spec.template
+  targets:
+  - select: {kind: CronJob}
+    fieldPaths:
+    - spec.jobTemplate.spec.template

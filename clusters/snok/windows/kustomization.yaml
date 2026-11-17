@@ -17,3 +17,12 @@ replacements:
       index: 2                      # http: / "" / <host> / isos / <file>
     fieldPaths:
     - spec.source.http.url
+# Monthly rebuilds (CronJob windows-<OS>-rebuild, see windows/build/README.md) are suspended by
+# default. To turn them on for every Windows version on this cluster, uncomment:
+# patches:
+# - target:
+#     kind: CronJob
+#   patch: |-
+#     - op: replace
+#       path: /spec/suspend
+#       value: false

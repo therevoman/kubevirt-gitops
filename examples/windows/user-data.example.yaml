@@ -1,0 +1,10 @@
+#cloud-config
+# cloudbase-init user data for the Windows example VMs. Copy this file, set your own user name and
+# password (Windows complexity rules: 8+ characters, 3 of upper case, lower case, digit, symbol),
+# and create the Secret from your copy. Don't commit the copy:
+#   oc create secret generic windows-example-userdata --from-file=userdata=my-user-data.yaml -n <namespace>
+users:
+- name: example
+  gecos: Example administrator
+  groups: Administrators
+  passwd: SET-YOUR-OWN

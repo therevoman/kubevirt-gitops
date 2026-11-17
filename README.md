@@ -10,16 +10,12 @@ the default leans to OpenShift products and namespaces.
 
 ## Get Started
 
-Under the [setup](setup) directory, there are a number of scripts to
-help in an OpenShift GitOps deployment.
+On an OpenShift cluster with OpenShift Virtualization and OpenShift GitOps:
 
-To run everything, use [`install.sh`](setup/install.sh) without any arguments.
-This script will:
-
-  - Discover the ArgoCD namespace and configuration CR names.
-  - Install health check scripts that ArgoCD uses to better track status of custom resources.
-
-More in-depth descriptions may be found in the [README](setup/)
+1. Add the Argo CD health checks for KubeVirt kinds to the GitOps operator's instance:
+   `oc apply -k gitopsservice/health` (see [gitopsservice](gitopsservice/README.md)).
+2. Create the cluster's app-of-apps: `oc apply -k clusters/<cluster>` (see
+   [Microsoft Windows boot sources](#microsoft-windows-boot-sources)).
 
 ## Repository layout
 
@@ -30,9 +26,8 @@ More in-depth descriptions may be found in the [README](setup/)
 | `win10`, `win11`, `win2k16`, `win2k19`, `win2k22`, `win2k25` | One Windows version each: build parameters + per-cluster overlays |
 | [datavolumes](datavolumes) | Fedora and CentOS Stream cloud-image DataVolumes |
 | [vms](vms) | Demo Fedora and CentOS VMs cloned from DataSources |
-| [examples](examples) | VirtualMachinePool demos (not deployed by `clusters/`) |
-| [virtualization](virtualization) | 2022 OLM install of OpenShift Virtualization (unused; see the tracker) |
-| [setup](setup), [gitopsservice](gitopsservice) | Argo CD helper scripts and health checks |
+| [examples](examples) | VirtualMachinePool demos and a Windows example VM per version (not deployed by `clusters/`) |
+| [gitopsservice](gitopsservice) | OpenShift GitOps settings: Argo CD health checks, infra placement, namespaces |
 | [docs](docs) | [Architecture review and improvement tracker](docs/architecture-review.md), [fork survey](docs/upstream-fork-survey.md) |
 
 ### DataVolumes
@@ -65,9 +60,11 @@ parameters:
 ```
 windows/build/                  # Kustomize Component, shared by every version
   windows-install-{sa,rbac,job}.yaml
+  windows-rebuild-cronjob.yaml  # monthly rebuild (suspended unless the cluster turns it on)
   config/                       # -> ConfigMap windows-<OS>-install-scripts
-    install.sh                  #    Job: create VM, start it, follow the build, clone to the boot source
+    install.sh                  #    build, check, store, publish (Job and CronJob)
     windows-install-vm.yaml     #    build VM template (@PLACEHOLDERS@ filled from os.env)
+    windows-verify-vm.yaml      #    throwaway clone that checks the image before it is published
     clone-boot-source.yaml      #    DataVolume into openshift-virtualization-os-images
     autounattend.xml            #    unattended install; desktop/server and product-key blocks
     post-install.ps1            #    virtio-win, guest agent, cloudbase-init, Windows Update, sysprep
@@ -103,6 +100,11 @@ What every build does:
   - WinRE sits before C:, so clones grow C: at first boot.
   - cloudbase-init (pinned and hash-checked) only reads the config drive / NoCloud sources.
   - A KubeVirt sysprep disk is honored.
+- **Checked before publishing.** A throwaway clone of the new disk must boot and run
+  cloudbase-init user data (read back through the guest agent) before the boot source changes.
+- **Dated builds.** Each build is stored as `<boot source>-<YYYY-MM>` (the newest `KEEP_BUILDS`,
+  default 2, are kept for rollback) and then cloned to `<boot source>`, the PVC the DataSource
+  serves.
 
 Cluster differences are kept out of the base:
 
@@ -116,8 +118,9 @@ Cluster differences are kept out of the base:
   `winXX/overlays/<cluster>` includes. Change a cluster's ISO server in that one file.
 
 The build runs in namespace `kubevirt-gitops` and takes 30-90 minutes or more (most of it Windows Update;
-Server 2016 is the slowest). `install.sh` exits at once if the boot-source PVC already exists;
-delete that PVC to rebuild.
+Server 2016 is the slowest). The Job exits at once if the boot-source PVC already exists.
+Monthly patched images come from CronJob `windows-<OS>-rebuild`, which a cluster turns on in
+`clusters/<cluster>/windows/kustomization.yaml`; see [windows/build](windows/build/README.md).
 
 Run one directly:
 

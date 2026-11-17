@@ -1,0 +1,15 @@
+# Microsoft Windows Server 2016 example VM, cloned from DataSource win2k16: oc apply -k examples/windows/win2k16 -n <namespace>
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+- name: windows-example-settings
+  literals:
+  - BOOT_SOURCE=win2k16
+  - OS_ID=windows2k16
+  - DISK_SIZE=60Gi                # same as win2k16/base/os.env
+  options:
+    disableNameSuffixHash: true
+    annotations:
+      config.kubernetes.io/local-config: "true"
+components:
+- ../base

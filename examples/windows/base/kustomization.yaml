@@ -1,0 +1,29 @@
+# Example VM for any Windows boot source. Each examples/windows/<version> supplies the local-config
+# ConfigMap windows-example-settings (BOOT_SOURCE, OS_ID, DISK_SIZE); the replacements below put
+# those values into the VM.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+- vm.yaml
+replacements:
+- source: {kind: ConfigMap, name: windows-example-settings, fieldPath: data.BOOT_SOURCE}
+  targets:
+  - select: {kind: VirtualMachine}
+    options: {delimiter: "-", index: 0}
+    fieldPaths:
+    - metadata.name
+    - spec.dataVolumeTemplates.0.metadata.name
+    - spec.template.spec.volumes.[name=rootdisk].dataVolume.name
+  - select: {kind: VirtualMachine}
+    fieldPaths:
+    - spec.dataVolumeTemplates.0.spec.sourceRef.name
+- source: {kind: ConfigMap, name: windows-example-settings, fieldPath: data.OS_ID}
+  targets:
+  - select: {kind: VirtualMachine}
+    fieldPaths:
+    - spec.template.metadata.annotations.[vm.kubevirt.io/os]
+- source: {kind: ConfigMap, name: windows-example-settings, fieldPath: data.DISK_SIZE}
+  targets:
+  - select: {kind: VirtualMachine}
+    fieldPaths:
+    - spec.dataVolumeTemplates.0.spec.storage.resources.requests.storage
